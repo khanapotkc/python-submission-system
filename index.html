@@ -544,11 +544,61 @@ function api(fn, ...args){
 
 const store = {
   get(){ try { return JSON.parse(sessionStorage.getItem('pyss')||'null'); } catch(e){ return null; } },
-  set(v){ try { v ? sessionStorage.setItem('pyss', JSON.stringify(v)) : sessionStorage.removeItem('pyss'); } catch(e){} }
+  set(v){ try { v ? sessionStorage.setItem('pyss', JSON.stringify(v)) : sessionStorage.removeItem('pyss'); } catch(e){} if (v) idleReset(); }
 };
 
 const S = { token:null, role:null, app:null, announce:'', student:null, filter:'all',
-            admin:null, tab:'overview', cls:'all', q:'', dirty:new Map(), showPw:false };
+            admin:null, tab:'overview', cls:'all', q:'', dirty:new Map(), showPw:false, loginNotice:'' };
+
+/* =====================================================================
+ *  ออกจากระบบอัตโนมัติเมื่อไม่มีการใช้งาน (ปรับเวลาได้ที่ IDLE_MINUTES)
+ * =================================================================== */
+const IDLE_MINUTES = { student: 15, admin: 30 };   // นักเรียน 15 นาที, ครู 30 นาที
+const IDLE_WARN_SEC = 60;                          // เตือนก่อนออก 60 วินาที
+let lastActive = Date.now(), idleBox = null, idleTick = null;
+function idleReset(){
+  lastActive = Date.now();
+  try { sessionStorage.setItem('pyss_act', String(lastActive)); } catch(e){}
+}
+function idleLimitMs(role){ return (IDLE_MINUTES[role] || 15) * 60000; }
+function idleExpiredOnBoot(role){
+  let t = 0; try { t = Number(sessionStorage.getItem('pyss_act') || 0); } catch(e){}
+  return t && Date.now() - t >= idleLimitMs(role);
+}
+['mousemove','mousedown','keydown','scroll','touchstart','wheel'].forEach(ev =>
+  window.addEventListener(ev, () => { if (!idleBox && Date.now() - lastActive > 3000) idleReset(); }, {passive:true, capture:true}));
+function idleLogout(){
+  if (idleTick) { clearInterval(idleTick); idleTick = null; }
+  if (idleBox) { idleBox.remove(); idleBox = null; }
+  const role = S.role;
+  S.dirty.clear(); if (S.sheetDirty) S.sheetDirty.clear(); S.sheet = null;
+  document.querySelectorAll('.modal').forEach(m => m.remove());
+  S.loginNotice = `ออกจากระบบอัตโนมัติ เพราะไม่มีการใช้งานเกิน ${IDLE_MINUTES[role] || 15} นาที — กรุณาเข้าสู่ระบบใหม่`;
+  doLogout().then(() => { if (role === 'admin') renderLogin('admin'); });
+}
+function idleCheck(){
+  if (!S.token || !S.role) return;
+  const left = idleLimitMs(S.role) - (Date.now() - lastActive);
+  if (left <= 0) return idleLogout();
+  if (left <= IDLE_WARN_SEC * 1000 && !idleBox) {
+    const unsaved = (S.dirty ? S.dirty.size : 0) + (S.sheetDirty ? S.sheetDirty.size : 0);
+    idleBox = modal({title:'ยังใช้งานอยู่ไหม?', icon:'clock', okText:'ใช้งานต่อ', cancelText:'ออกจากระบบ', body:`
+      <div style="text-align:center;padding:6px 0">
+        <div class="mono" style="font-size:44px;font-weight:700;color:var(--late)" id="idleSec">${Math.ceil(left/1000)}</div>
+        <p style="margin:6px 0 0;line-height:1.7">ไม่มีการใช้งานมาสักพัก ระบบจะออกจากระบบอัตโนมัติเมื่อหมดเวลา</p>
+        ${unsaved ? `<p style="color:var(--danger);margin:8px 0 0">⚠ มีการแก้ไขที่ยังไม่บันทึก ${unsaved} รายการ จะหายไปถ้าออกจากระบบ</p>` : ''}
+      </div>`, onOk: () => { idleBox = null; clearInterval(idleTick); idleTick = null; idleReset(); }});
+    idleBox.style.zIndex = 65;
+    idleBox.addEventListener('click', e => { if (idleBox && (e.target === idleBox || e.target.closest('[data-x]'))) { idleBox = null; idleLogout(); } });
+    idleTick = setInterval(() => {
+      const l = idleLimitMs(S.role) - (Date.now() - lastActive);
+      const el = document.getElementById('idleSec'); if (el) el.textContent = Math.max(0, Math.ceil(l/1000));
+      if (l <= 0) idleLogout();
+    }, 1000);
+  }
+}
+setInterval(idleCheck, 5000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) idleCheck(); });
 
 /* =====================================================================
  *  UI utilities
@@ -706,10 +756,12 @@ function renderLogin(mode='student', err=''){
         <div class="eline"><span class="no">5</span><span></span></div>`}
         <button class="run" type="submit">${ic('play')} ${isAdmin?'admin.login()':'login(student_id)'}</button>
         ${err ? `<div class="err">⚠ ${esc(err)}</div>` : ''}
+        ${S.loginNotice ? `<div class="err" style="background:rgba(255,212,59,.1);border-color:rgba(255,212,59,.5);color:#ffe9a3">⏰ ${esc(S.loginNotice)}</div>` : ''}
         <div class="hint">${isAdmin ? '# สำหรับครูผู้สอนเท่านั้น — จัดการสถานะ คะแนน นักเรียน และภาระงาน' : '# กรอกรหัสประจำตัวนักเรียน 5 หลัก แล้วกด Enter'}</div>
       </form>
     </div>
   </div>`;
+  S.loginNotice = '';
   document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => renderLogin(b.dataset.mode));
   if ($('#eye')) $('#eye').onclick = () => { const p = $('#lp'); const show = p.type === 'password'; p.type = show ? 'text':'password'; $('#eye').innerHTML = ic(show?'eyeoff':'eye'); };
   $('#loginForm').onsubmit = async e => {
@@ -1810,8 +1862,15 @@ const MOCK = (() => {
   if (MODE === 'live') document.body.insertAdjacentHTML('beforeend', '<div class="demo-badge" style="background:#22a565;color:#fff">● LIVE • Google Sheets</div>');
   if (MODE === 'api') document.body.insertAdjacentHTML('beforeend', '<div class="demo-badge" style="background:#3776ab;color:#fff">● CONNECTED • Apps Script</div>');
   try { const info = await api('getPublicInfo'); applyApp(info.app); S.announce = info.announce; } catch(e){}
-  const saved = store.get();
+  let saved = store.get();
+  if (saved && saved.token && idleExpiredOnBoot(saved.role)) {   // ปิดแท็บ/ทิ้งไว้นานเกินกำหนด
+    S.loginNotice = `ออกจากระบบอัตโนมัติ เพราะไม่มีการใช้งานเกิน ${IDLE_MINUTES[saved.role] || 15} นาที — กรุณาเข้าสู่ระบบใหม่`;
+    if (MODE === 'api') callApi(apiUrl(), 'logout', [saved.token]).catch(() => {});
+    const role = saved.role; store.set(null); saved = null;
+    renderLogin(role === 'admin' ? 'admin' : 'student'); return;
+  }
   if (saved && saved.token) {
+    try { const t = Number(sessionStorage.getItem('pyss_act') || 0); if (t) lastActive = t; } catch(e){}
     S.token = saved.token; S.role = saved.role;
     try {
       if (saved.role === 'admin') { await loadAdmin(); return; }
