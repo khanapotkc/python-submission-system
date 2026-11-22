@@ -268,7 +268,8 @@ table.gt{border-collapse:separate;border-spacing:0;width:100%;font-size:14px}
 .pw{font-family:var(--mono);cursor:pointer;border-bottom:1px dashed var(--ink-3)}
 .warn{color:var(--late);font-size:12px}
 .alist{display:grid;gap:12px}
-.aitem{display:grid;grid-template-columns:90px 1.6fr 90px 1.8fr auto;gap:10px;align-items:center;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:12px 14px}
+.aitem .lk{grid-column:2/4}.aitem .dsc{grid-column:4/6}
+.aitem{display:grid;grid-template-columns:90px 2fr 80px 160px auto;gap:10px;align-items:center;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:12px 14px}
 .aitem .k{font-family:var(--mono);font-weight:700;color:var(--py-blue-d)}
 .aitem .flags{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
 .flag{font-size:11px;padding:2px 7px;border-radius:6px;background:#eef2f7;color:var(--ink-2)}
@@ -305,7 +306,35 @@ textarea.txt{min-height:110px;resize:vertical;width:100%;line-height:1.6}
 .gs-btn small{display:block;font-size:11.5px;color:#0f9d58}
 .gs-btn .gs-ext{width:15px;height:15px;color:var(--ink-3);margin-left:4px}
 
+.due{display:inline-flex;align-items:center;gap:6px;margin-top:12px;font-size:13px;color:var(--ink-2);background:#f1f5fa;padding:4px 10px;border-radius:8px;width:max-content}
+.due svg{width:14px;height:14px}
+.due.over{background:#fde8e8;color:#c0262c;font-weight:600}
+.desc{margin-top:8px;font-size:13.5px;color:var(--ink-2);line-height:1.6}
+/* sheet editor */
+.sh-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.sh-tabs button{border:1.5px solid var(--line);background:#fff;border-radius:10px;padding:8px 14px;cursor:pointer;font-weight:500;color:var(--ink-2)}
+.sh-tabs button.on{background:#0f9d58;border-color:#0f9d58;color:#fff}
+table.sx{border-collapse:separate;border-spacing:0;font-size:13.5px}
+.sx th,.sx td{border-right:1px solid #e6ecf3;border-bottom:1px solid #e6ecf3;padding:0;background:#fff}
+.sx thead th{position:sticky;top:0;z-index:2;background:#f4f7fb;font-family:var(--mono);font-size:12px;color:var(--ink-3);padding:4px 6px;font-weight:600}
+.sx .rn{position:sticky;left:0;z-index:1;background:#f4f7fb;font-family:var(--mono);font-size:12px;color:var(--ink-3);text-align:center;min-width:54px;padding:0 4px}
+.sx thead .rn{z-index:3}
+.sx tr.hdr td{background:#eef6ff}
+.sx tr.hdr .ce{font-weight:700;color:var(--py-blue-d)}
+.ce{border:0;background:transparent;padding:7px 8px;min-width:110px;width:100%;outline:none;font-family:var(--sans);font-size:13.5px}
+.ce:focus{background:#fffbe6;box-shadow:inset 0 0 0 2px var(--py-yellow)}
+.ce.dirty{background:#fff6cc}
+.ce[readonly]{color:#7a8ca0;font-style:italic}
+.xbtn{border:0;background:none;color:#c4ccd6;cursor:pointer;padding:2px;display:inline-grid;vertical-align:middle}
+.xbtn:hover{color:var(--danger)}
+.xbtn svg{width:14px;height:14px}
+.preview-wrap{background:var(--panel);border-radius:14px;padding:14px}
+.preview-wrap .grid{grid-template-columns:repeat(2,1fr);gap:14px}
+@media (max-width:700px){.preview-wrap .grid{grid-template-columns:1fr}}
+
 /* ---------- read-only (LIVE) ---------- */
+.ro .ce,.ro #appForm,.ro #stForm{pointer-events:none}
+.ro .xbtn,.ro #shAddRow,.ro #shAddCol,.ro #bAppInfo,.ro #bStOpt,.ro #bImport,.ro #bfScore,.ro .shsave{display:none!important}
 .ro #bfGo,.ro #bAddStu,.ro [data-edit],.ro [data-del],.ro [data-upd],.ro [data-rm],.ro #bAddItem,.ro #bAnn,.ro #bAnnClear,.ro #bCred,.ro .savebar{display:none!important}
 .ro .toolbar.panel,.ro #newItem,.ro #credForm,.ro #annText{opacity:.55;pointer-events:none}
 .ro select.ss,.ro input.si,.ro .aitem input{pointer-events:none}
@@ -315,7 +344,7 @@ textarea.txt{min-height:110px;resize:vertical;width:100%;line-height:1.6}
   .grid{grid-template-columns:repeat(2,1fr)}
   .stats{grid-template-columns:1fr 1fr}.stats .stat:last-child{grid-column:1/-1}
   .two{grid-template-columns:1fr}
-  .aitem{grid-template-columns:80px 1fr 80px;}.aitem .lk{grid-column:1/-1}.aitem .ac{grid-column:1/-1;justify-content:flex-end}
+  .aitem{grid-template-columns:80px 1fr 80px;}.aitem .lk,.aitem .dsc,.aitem [name=due]{grid-column:1/-1}.aitem .ac{grid-column:1/-1;justify-content:flex-end;order:9}
 }
 @media (max-width:860px){
   .term{display:none}
@@ -419,7 +448,7 @@ function kindOf(v){
   if(v.includes('ตรวจแล้ว')) return 'done';
   if(v.includes('ช้า')) return 'late';
   if(v.includes('ใหม่') || v.includes('แก้')) return 'redo';
-  if(v.includes('ยังไม่')) return 'todo';
+  if(v.includes('ยังไม่') || v.includes('ขาด') || v.includes('ไม่ส่ง')) return 'todo';
   return 'sent';
 }
 const isSubmitted = k => k==='done' || k==='sent' || k==='late';
@@ -699,10 +728,17 @@ function taskCard(x, i){
   const foot = canSubmit
     ? `<a class="btn yel sm" href="${esc(x.link)}" target="_blank" rel="noopener">${ic('send')} ไปส่งงาน</a>`
     : `<span class="pill k-${k}">${ic(K.icon)} ${esc(x.hasStatus ? label : (n!=null?'มีคะแนนแล้ว':'รอคะแนน'))}</span>`;
+  let dueHtml = '';
+  if (x.due) {
+    const d = new Date(x.due + 'T23:59:59');
+    const overdue = x.hasStatus && (k === 'todo' || k === 'redo') && d < new Date();
+    dueHtml = `<div class="due ${overdue?'over':''}">${ic('clock')} กำหนดส่ง ${d.toLocaleDateString('th-TH',{day:'numeric',month:'short',year:'2-digit'})}${overdue?' • เลยกำหนด':''}</div>`;
+  }
   return `<article class="task ${k}" style="animation-delay:${Math.min(i*45,600)}ms">
     <div class="hd">${t.tag?`<span class="tag">${esc(t.tag)}</span>`:''}<span class="tt" title="${esc(x.title)}">${esc(t.name)}</span>${ic(K.icon)}</div>
     <div class="bd">
       <div class="row"><div class="st-ico">${ic(K.icon)}</div><div class="stx"><b>${esc(label)}</b><small>${esc(x.hasStatus ? K.desc : (x.max?`คะแนนเต็ม ${fmt(x.max)}`:'คะแนนสอบ'))}</small></div></div>
+      ${dueHtml}${x.desc ? `<div class="desc">${esc(x.desc)}</div>` : ''}
       ${scoreHtml}
       <div class="ft">${foot}</div>
     </div></article>`;
@@ -785,8 +821,18 @@ async function loadAdmin(keepTab){
 }
 const TABS = [
   ['overview','ภาพรวม','chart'], ['status','สถานะการส่ง','checkc'], ['score','คะแนน','star'],
-  ['students','นักเรียน','users'], ['items','ภาระงาน','book'], ['settings','ตั้งค่า','gear']
+  ['students','นักเรียน','users'], ['items','ภาระงาน','book'], ['sheets','แก้ไขชีต','file'], ['settings','ตั้งค่า','gear']
 ];
+S.sheetKind = 'status'; S.sheet = null; S.sheetDirty = new Map(); S.sheetLoading = false;
+const SHEET_NAMES = {login:'Login นักเรียน', status:'สถานะการส่ง', score:'คะแนน'};
+const pendingEdits = () => S.dirty.size + S.sheetDirty.size;
+function downloadCSV(name, rows){
+  const csv = '﻿' + rows.map(r => r.map(v => { v = String(v == null ? '' : v); return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g,'""') + '"' : v; }).join(',')).join('\r\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv;charset=utf-8'}));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
 function filteredStudents(){
   const q = S.q.trim().toLowerCase();
   return S.admin.students.filter(s => (S.cls==='all' || s.cls===S.cls) &&
@@ -831,19 +877,20 @@ function renderAdmin(){
   const fc = $('#fCls'); if (fc) fc.onchange = () => { S.cls = fc.value; renderTab(); };
   const fq = $('#fQ'); if (fq) fq.oninput = () => { S.q = fq.value; renderTab(); };
   $('#bRefresh').onclick = async () => {
-    if (S.dirty.size && !(await confirmBox('ยกเลิกการแก้ไข?', `มีการแก้ไขที่ยังไม่บันทึก <b>${S.dirty.size}</b> รายการ ต้องการโหลดข้อมูลใหม่และทิ้งการแก้ไขหรือไม่`, 'โหลดใหม่'))) return;
-    S.dirty.clear();
+    if (pendingEdits() && !(await confirmBox('ยกเลิกการแก้ไข?', `มีการแก้ไขที่ยังไม่บันทึก <b>${pendingEdits()}</b> รายการ ต้องการโหลดข้อมูลใหม่และทิ้งการแก้ไขหรือไม่`, 'โหลดใหม่'))) return;
+    S.dirty.clear(); S.sheetDirty.clear(); S.sheet = null;
     try { await loadAdmin(true); toast('โหลดข้อมูลล่าสุดแล้ว'); } catch(e){ toast(e.message, true); }
   };
   $('#bOut').onclick = async () => {
-    if (S.dirty.size && !(await confirmBox('ออกจากระบบ?', `มีการแก้ไขที่ยังไม่บันทึก <b>${S.dirty.size}</b> รายการ`, 'ออกโดยไม่บันทึก'))) return;
+    if (pendingEdits() && !(await confirmBox('ออกจากระบบ?', `มีการแก้ไขที่ยังไม่บันทึก <b>${pendingEdits()}</b> รายการ`, 'ออกโดยไม่บันทึก'))) return;
+    S.sheetDirty.clear(); S.sheet = null;
     doLogout();
   };
   renderTab();
 }
 function renderTab(){
   const el = $('#tabBody');
-  const fn = {overview:tabOverview, status:tabStatus, score:tabScore, students:tabStudents, items:tabItems, settings:tabSettings}[S.tab];
+  const fn = {overview:tabOverview, status:tabStatus, score:tabScore, students:tabStudents, items:tabItems, sheets:tabSheets, settings:tabSettings}[S.tab];
   el.innerHTML = fn();
   bindTab();
   animateBars();
@@ -923,6 +970,7 @@ function tabStatus(){
     <select class="sel" id="bfVal">${['', ...A.statusOptions].map(o=>`<option value="${esc(o)}">${o||'ยังไม่ส่ง (ล้างค่า)'}</option>`).join('')}</select>
     <label class="chk" style="display:flex;align-items:center;gap:6px;font-size:14px"><input type="checkbox" id="bfEmpty" checked> เฉพาะช่องที่ยังว่าง</label>
     <button class="btn sm" id="bfGo">ใช้กับ ${list.length} คนที่แสดง</button>
+    <div class="grow"></div><button class="btn sm ghost" id="bExport" data-x="status">${ic('save')} ส่งออก CSV</button>
   </div>
   <div class="tbl-wrap"><table class="gt"><thead><tr><th class="stk c0">เลขที่</th><th class="stk c1">ชื่อ-สกุล</th><th>ห้อง</th>
     ${items.map(x => { const t = splitTitle(x.title); return `<th title="${esc(x.title)}"><div class="tg">${esc(t.tag||x.key)}</div><small>${esc(t.name)}</small></th>`; }).join('')}<th>ส่งแล้ว</th></tr></thead>
@@ -942,6 +990,13 @@ function tabScore(){
   const items = A.items.filter(x => x.inScore);
   const totalMax = items.reduce((a,x)=>a+(x.max||0),0);
   return `
+  <div class="toolbar panel" style="margin-bottom:14px;padding:12px 14px">
+    <span style="display:flex;align-items:center;gap:6px;font-weight:600">${ic('wand','width="18" height="18"')} ให้คะแนนเต็ม</span>
+    <select class="sel" id="bsItem">${items.filter(x=>x.max!=null).map(x=>`<option value="${esc(x.key)}">${esc(x.title)} (${fmt(x.max)})</option>`).join('')}</select>
+    <span style="font-size:14px;color:var(--ink-2)">กับคนที่ <b>ตรวจแล้ว/ส่งแล้ว</b> และยังไม่มีคะแนน</span>
+    <button class="btn sm" id="bfScore">เติมคะแนน</button>
+    <div class="grow"></div><button class="btn sm ghost" id="bExport" data-x="score">${ic('save')} ส่งออก CSV</button>
+  </div>
   <div class="tbl-wrap"><table class="gt"><thead><tr><th class="stk c0">เลขที่</th><th class="stk c1">ชื่อ-สกุล</th><th>ห้อง</th>
     ${items.map(x => { const t = splitTitle(x.title); return `<th title="${esc(x.title)}"><div class="tg">${esc(t.tag||x.key)}</div><small>${esc(t.name)}</small><small style="color:var(--py-blue)">เต็ม ${x.max==null?'–':fmt(x.max)}</small></th>`; }).join('')}
     <th>รวม<small>เต็ม ${fmt(totalMax)}</small></th></tr></thead>
@@ -963,6 +1018,8 @@ function tabStudents(){
   return `
   <div class="toolbar"><div class="grow" style="color:var(--ink-2);font-size:14px">แสดง ${list.length} คน — ข้อมูลเข้าสู่ระบบอยู่ในชีต Login, ชื่อ/รหัสจะอัพเดทในชีตสถานะและคะแนนด้วย</div>
     <button class="btn sm ghost" id="bPw">${ic(S.showPw?'eyeoff':'eye')} ${S.showPw?'ซ่อน':'แสดง'}รหัสผ่าน</button>
+    <button class="btn sm ghost" id="bExport" data-x="students">${ic('save')} CSV</button>
+    <button class="btn sm ghost" id="bImport">${ic('users')} นำเข้าหลายคน</button>
     <button class="btn sm pri" id="bAddStu">${ic('plus')} เพิ่มนักเรียน</button></div>
   <div class="tbl-wrap"><table class="gt"><thead><tr><th class="stk c0">เลขที่</th><th class="stk c1">ชื่อ-สกุล</th><th>รหัส</th><th>ห้อง</th><th>Username</th><th>Password</th><th>ข้อมูลในชีต</th><th></th></tr></thead>
   <tbody>${list.map((s,i) => {
@@ -970,7 +1027,7 @@ function tabStudents(){
     return `<tr><td class="stk c0">${esc(s.number)}</td><td class="stk c1 l">${esc(s.name)}</td><td class="mono">${esc(s.stdId||'-')}</td><td>${esc(s.cls)}</td>
       <td>${esc(s.username||'-')}</td><td class="mono">${s.password ? (S.showPw ? esc(s.password) : '•••••') : '-'}</td>
       <td>${miss.length ? `<span class="warn">${ic('alert','width="13" height="13" style="vertical-align:-2px"')} ไม่มีใน ${miss.join(', ')}</span>` : `<span style="color:var(--done);font-size:13px">✔ ครบ 3 ชีต</span>`}</td>
-      <td style="text-align:right"><button class="btn sm ghost" data-edit="${esc(sid(s))}">${ic('edit')}</button> <button class="btn sm danger" data-del="${esc(sid(s))}">${ic('trash')}</button></td></tr>`;
+      <td style="text-align:right;white-space:nowrap"><button class="btn sm ghost" data-view="${esc(sid(s))}" title="ดูหน้าจอนักเรียน">${ic('eye')}</button> <button class="btn sm ghost" data-edit="${esc(sid(s))}" title="แก้ไข">${ic('edit')}</button> <button class="btn sm danger" data-del="${esc(sid(s))}" title="ลบ">${ic('trash')}</button></td></tr>`;
   }).join('') || '<tr><td colspan="8" class="empty">ไม่พบนักเรียน</td></tr>'}</tbody></table></div>`;
 }
 function studentForm(s){
@@ -1005,7 +1062,9 @@ function tabItems(){
     <div class="form-grid" id="newItem">
       <label>ชื่อภาระงาน (รูปแบบ "รหัส : ชื่อ")<input class="txt" name="title" placeholder="W11 : List & Dictionary"></label>
       <label>คะแนนเต็ม<input class="txt" name="max" inputmode="decimal" placeholder="เช่น 5 (เว้นว่างได้)"></label>
-      <label class="full">ลิงก์สำหรับส่งงาน (ไม่บังคับ)<input class="txt" name="link" placeholder="https://classroom.google.com/..."></label>
+      <label>ลิงก์สำหรับส่งงาน (ไม่บังคับ)<input class="txt" name="link" placeholder="https://classroom.google.com/..."></label>
+      <label>กำหนดส่ง (ไม่บังคับ)<input class="txt" type="date" name="due"></label>
+      <label class="full">คำอธิบาย / รายละเอียดงาน (ไม่บังคับ)<input class="txt" name="desc" maxlength="300" placeholder="เช่น ทำใบงานหน้า 12–14 แล้วแนบไฟล์ .py"></label>
       <label class="chk"><input type="checkbox" name="toStatus" checked> เพิ่มในชีตสถานะการส่ง</label>
       <label class="chk"><input type="checkbox" name="toScore" checked> เพิ่มในชีตคะแนน</label>
     </div>
@@ -1016,8 +1075,10 @@ function tabItems(){
       <div><div class="k">${esc(x.key)}</div><div class="flags"><span class="flag ${x.inStatus?'on':''}">สถานะ</span><span class="flag ${x.inScore?'on':''}">คะแนน</span></div></div>
       <input class="txt" name="title" value="${esc(x.title)}" aria-label="ชื่อภาระงาน">
       <input class="txt" name="max" value="${x.max==null?'':esc(x.max)}" placeholder="เต็ม" aria-label="คะแนนเต็ม" ${x.inScore?'':'disabled title="ไม่มีในชีตคะแนน"'}>
+      <input class="txt" type="date" name="due" value="${esc(x.due||'')}" aria-label="กำหนดส่ง" title="กำหนดส่ง">
+      <div class="ac" style="display:flex;gap:6px"><button class="btn sm" data-upd="${esc(x.key)}" title="บันทึก">${ic('save')}</button><button class="btn sm danger" data-rm="${esc(x.key)}" title="ลบ">${ic('trash')}</button></div>
       <input class="txt lk" name="link" value="${esc(x.link)}" placeholder="ลิงก์ส่งงาน https://..." aria-label="ลิงก์ส่งงาน">
-      <div class="ac" style="display:flex;gap:6px"><button class="btn sm" data-upd="${esc(x.key)}">${ic('save')}</button><button class="btn sm danger" data-rm="${esc(x.key)}">${ic('trash')}</button></div>
+      <input class="txt dsc" name="desc" value="${esc(x.desc||'')}" maxlength="300" placeholder="คำอธิบายงาน (นักเรียนเห็นบนการ์ด)" aria-label="คำอธิบาย">
     </div>`).join('')}</div>
   <p style="font-size:13px;color:var(--ink-3)"># รหัสงาน (ข้อความก่อน ":") ใช้จับคู่คอลัมน์ระหว่างชีตสถานะและชีตคะแนน • ลิงก์ส่งงานจะแสดงเป็นปุ่ม "ไปส่งงาน" ให้นักเรียนที่ยังไม่ส่ง</p>`;
 }
@@ -1059,7 +1120,243 @@ function tabSettings(){
       </div>
       <div style="margin-top:12px;text-align:right"><button class="btn sm pri" id="bCred">${ic('save')} บันทึกบัญชีใหม่</button></div>
       <p style="font-size:13px;color:var(--ink-3)"># บัญชีใหม่จะเก็บใน Script Properties ของโปรเจกต์ (แทนค่าเริ่มต้นในโค้ด)</p>
-    </div></div>`;
+    </div></div>
+    <div class="two">
+      <div class="panel"><h3>${ic('book','width="20" height="20"')} ข้อมูลรายวิชา / หัวเว็บ</h3>
+        <div class="form-grid" id="appForm">
+          <label class="full">ชื่อระบบ<input class="txt" name="title" value="${esc(A.app.title)}"></label>
+          <label class="full">รายวิชา<input class="txt" name="subject" value="${esc(A.app.subject)}"></label>
+          <label class="full">ระดับชั้น / ภาคเรียน / ปีการศึกษา<input class="txt" name="level" value="${esc(A.app.level)}"></label>
+          <label class="full">โรงเรียน<input class="txt" name="school" value="${esc(A.app.school)}"></label>
+          <label class="full">URL ตราโรงเรียน (https://... เว้นว่าง = โลโก้โค้ด)<input class="txt" name="logoUrl" value="${esc(A.app.logoUrl)}"></label>
+        </div>
+        <div style="margin-top:12px;text-align:right"><button class="btn sm pri" id="bAppInfo">${ic('save')} บันทึกข้อมูลรายวิชา</button></div>
+      </div>
+      <div class="panel"><h3>${ic('checkc','width="20" height="20"')} ตัวเลือกสถานะการส่ง</h3>
+        <div id="stForm"><textarea class="txt" id="stOpts" style="min-height:150px">${esc(A.statusOptions.join('\n'))}</textarea></div>
+        <p style="font-size:13px;color:var(--ink-3);margin:8px 0"># 1 บรรทัด = 1 สถานะ • ช่องว่างในชีต = "ยังไม่ส่ง" เสมอ<br># คำที่มี "ตรวจแล้ว" = สีเขียว, "ช้า" = ส้ม, "ใหม่/แก้" = ม่วง, "ขาด/ไม่ส่ง" = ยังไม่ส่ง, อื่น ๆ = ส่งแล้ว (ฟ้า)</p>
+        <div style="text-align:right"><button class="btn sm pri" id="bStOpt">${ic('save')} บันทึกตัวเลือกสถานะ</button></div>
+      </div>
+    </div>`;
+}
+
+/* ---- Full sheet editor ---- */
+const colName = c => { let s = ''; c++; while (c) { const m = (c - 1) % 26; s = String.fromCharCode(65 + m) + s; c = Math.floor((c - 1) / 26); } return s; };
+async function loadSheet(){
+  if (S.sheetLoading) return;
+  S.sheetLoading = true;
+  const kind = S.sheetKind;
+  try {
+    const r = await api('adminReadSheet', S.token, kind);
+    if (kind !== S.sheetKind) return;
+    let V = (r.values && r.values.length) ? r.values : [['']];
+    const W = Math.max(1, ...V.map(x => x.length));
+    V = V.map(x => { x = x.slice(); while (x.length < W) x.push(''); return x; });
+    S.sheet = {...r, kind, values:V, formulas:r.formulas || [], origRows:V.length, origCols:W};
+    S.sheetDirty.clear();
+  } catch(e){
+    toast(e.message, true);
+    S.sheet = {kind, values:[['']], formulas:[], origRows:1, origCols:1, error:e.message};
+  } finally {
+    S.sheetLoading = false;
+    if (S.tab === 'sheets') renderTab();
+  }
+}
+function sheetVal(r, c){ const d = S.sheetDirty.get(r + ',' + c); return d ? d.v : ((S.sheet.values[r] || [])[c] ?? ''); }
+function tabSheets(){
+  const kind = S.sheetKind, sh = S.sheet;
+  const head = `<div class="toolbar"><div class="sh-tabs">${Object.entries(SHEET_NAMES).map(([k,l]) => `<button data-sk="${k}" class="${k===kind?'on':''}">${l}</button>`).join('')}</div>
+    <div class="grow"></div>
+    <button class="btn sm ghost" id="shAddRow">${ic('plus')} แถว</button>
+    <button class="btn sm ghost" id="shAddCol">${ic('plus')} คอลัมน์</button>
+    <button class="btn sm ghost" id="shReload" title="โหลดชีตใหม่">${ic('refresh')}</button>
+    ${sh && sh.url ? `<a class="btn sm ghost" href="${esc(sh.url)}" target="_blank" rel="noopener">${ic('ext')} Google Sheets</a>` : ''}</div>`;
+  if (!sh || sh.kind !== kind) { loadSheet(); return head + `<div class="empty">&gt;&gt;&gt; กำลังโหลดชีต ${esc(SHEET_NAMES[kind])}...</div>`; }
+  const V = sh.values, W = V[0].length;
+  const rows = V.map((row, r) => `<tr class="${r===0?'hdr':''}"><td class="rn">${r+1}${r>0?` <button class="xbtn" data-dr="${r}" title="ลบแถว ${r+1}">${ic('x')}</button>`:''}</td>${
+    row.map((_, c) => { const f = sh.formulas[r] && sh.formulas[r][c]; const dirty = S.sheetDirty.has(r+','+c);
+      return `<td><input class="ce ${dirty?'dirty':''}" data-r="${r}" data-c="${c}" value="${esc(sheetVal(r,c))}" ${f?'readonly title="ช่องนี้เป็นสูตร — แก้ใน Google Sheets"':''}></td>`; }).join('')}</tr>`).join('');
+  const n = S.sheetDirty.size;
+  return head + `
+    <div class="tbl-wrap"><table class="sx"><thead><tr><th class="rn">#</th>${Array.from({length:W}, (_, c) => `<th>${colName(c)} <button class="xbtn" data-dc="${c}" title="ลบคอลัมน์ ${colName(c)}">${ic('x')}</button></th>`).join('')}</tr></thead>
+    <tbody>${rows}</tbody></table></div>
+    <p style="font-size:13px;color:var(--ink-3);margin:10px 2px 0"># แก้ได้ทุกช่องรวมหัวตาราง (แถว 1) • Enter/↑/↓ เลื่อนช่อง • วางข้อมูลหลายช่องจาก Excel/Sheets ได้ • ช่องสูตรแก้ได้ใน Google Sheets เท่านั้น<br># การลบแถว/คอลัมน์มีผลทันทีกับชีตจริง (กู้คืนได้จาก "ประวัติเวอร์ชัน" ของ Google Sheets)</p>
+    <div class="savebar shsave ${n?'':'hidden'}" id="shBar"><div class="grow"># ชีต ${esc(SHEET_NAMES[kind])}: แก้ไขแล้ว <b>${n}</b> ช่อง</div>
+      <button class="btn sm ghost" id="shDiscard" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.3)">ยกเลิก</button>
+      <button class="btn sm yel" id="shSave">${ic('save')} บันทึกลง Google Sheets</button></div>`;
+}
+function setSheetCell(r, c, v){
+  const sh = S.sheet;
+  while (sh.values.length <= r) sh.values.push(new Array(sh.values[0].length).fill(''));
+  if (c >= sh.values[0].length) sh.values.forEach(row => { while (row.length <= c) row.push(''); });
+  const orig = r < sh.origRows && c < sh.origCols ? (sh.values[r][c] ?? '') : '';
+  if (String(v) === String(orig)) S.sheetDirty.delete(r+','+c);
+  else S.sheetDirty.set(r+','+c, {r, c, v:String(v)});
+}
+function bindSheet(body){
+  const sh = S.sheet;
+  body.querySelectorAll('[data-sk]').forEach(b => b.onclick = async () => {
+    if (b.dataset.sk === S.sheetKind) return;
+    if (S.sheetDirty.size && !(await confirmBox('เปลี่ยนชีต?', `มีการแก้ไขที่ยังไม่บันทึก <b>${S.sheetDirty.size}</b> ช่อง จะถูกยกเลิก`, 'เปลี่ยนชีต'))) return;
+    S.sheetKind = b.dataset.sk; S.sheet = null; S.sheetDirty.clear(); renderTab();
+  });
+  const rl = $('#shReload');
+  if (rl) rl.onclick = async () => {
+    if (S.sheetDirty.size && !(await confirmBox('โหลดชีตใหม่?', `การแก้ไข <b>${S.sheetDirty.size}</b> ช่องที่ยังไม่บันทึกจะหายไป`, 'โหลดใหม่'))) return;
+    S.sheet = null; S.sheetDirty.clear(); renderTab();
+  };
+  if (!sh || sh.kind !== S.sheetKind) return;
+  const focusCell = (r, c) => { const el = body.querySelector(`.ce[data-r="${r}"][data-c="${c}"]`); if (el) { el.focus(); el.select(); } };
+  body.querySelectorAll('input.ce').forEach(inp => {
+    const r = +inp.dataset.r, c = +inp.dataset.c;
+    inp.oninput = () => { setSheetCell(r, c, inp.value); inp.classList.toggle('dirty', S.sheetDirty.has(r+','+c)); refreshSheetBar(); };
+    inp.onkeydown = e => {
+      if (e.key === 'Enter' || e.key === 'ArrowDown') { e.preventDefault(); focusCell(r + (e.shiftKey && e.key==='Enter' ? -1 : 1), c); }
+      else if (e.key === 'ArrowUp') { e.preventDefault(); focusCell(r - 1, c); }
+    };
+    inp.onpaste = e => {
+      const text = (e.clipboardData || window.clipboardData).getData('text');
+      if (!/[\t\n]/.test(text.replace(/\r?\n$/, ''))) return;
+      e.preventDefault();
+      text.replace(/\r/g, '').replace(/\n$/, '').split('\n').forEach((line, i) => line.split('\t').forEach((v, j) => setSheetCell(r + i, c + j, v)));
+      renderTab(); toast('วางข้อมูลแล้ว (ยังไม่บันทึก)');
+    };
+  });
+  const sv = $('#shSave');
+  if (sv) sv.onclick = async () => {
+    const ops = [...S.sheetDirty.values()].map(d => ({type:'set', r:d.r, c:d.c, v:d.v}));
+    try {
+      const r = await run(() => api('adminSheetOps', S.token, S.sheet.kind, ops), `กำลังบันทึก ${ops.length} ช่อง...`);
+      if (!r) return;
+      toast(`บันทึกแล้ว ${r.done} ช่อง`);
+      S.sheetDirty.clear(); S.sheet = null; S.dirty.clear();
+      await loadAdmin(true);
+    } catch(e){ toast(e.message, true); }
+  };
+  const dc = $('#shDiscard'); if (dc) dc.onclick = () => { S.sheet = null; S.sheetDirty.clear(); renderTab(); };
+  const ar = $('#shAddRow');
+  if (ar) ar.onclick = () => {
+    sh.values.push(new Array(sh.values[0].length).fill(''));
+    renderTab();
+    const r = sh.values.length - 1; focusCell(r, 0);
+  };
+  const ac = $('#shAddCol');
+  if (ac) ac.onclick = () => modal({title:'เพิ่มคอลัมน์', icon:'plus', okText:'เพิ่ม',
+    body:`<label style="font-size:14px">หัวคอลัมน์ (แถว 1)<input class="txt" id="newColName" style="width:100%;margin-top:6px" placeholder="เช่น W11 : List (5)"></label>
+      <p style="font-size:13px;color:var(--ink-3)"># สำหรับภาระงาน แนะนำให้เพิ่มจากแท็บ "ภาระงาน" เพื่อเพิ่มทั้งชีตสถานะและคะแนนพร้อมกัน</p>`,
+    onOk: w => { const name = w.querySelector('#newColName').value.trim(); if (!name) { toast('กรุณาใส่หัวคอลัมน์', true); return false; }
+      setSheetCell(0, sh.values[0].length, name); renderTab(); }});
+  const needSaved = () => { if (S.sheetDirty.size) { toast('กรุณาบันทึกหรือยกเลิกการแก้ไขก่อนลบแถว/คอลัมน์', true); return false; } return true; };
+  body.querySelectorAll('[data-dr]').forEach(b => b.onclick = async () => {
+    const r = +b.dataset.dr;
+    if (r >= sh.origRows) { // แถวที่เพิ่งเพิ่ม ยังไม่อยู่ในชีต
+      const moved = [...S.sheetDirty.values()].filter(d => d.r !== r).map(d => d.r > r ? {...d, r:d.r-1} : d);
+      sh.values.splice(r, 1); S.sheetDirty = new Map(moved.map(d => [d.r+','+d.c, d])); renderTab(); return;
+    }
+    if (!needSaved()) return;
+    const label = sh.values[r].filter(Boolean).slice(0, 4).join(' | ') || '(แถวว่าง)';
+    if (!(await confirmBox(`ลบแถว ${r+1}`, `ลบแถวนี้ออกจากชีต <b>${esc(SHEET_NAMES[sh.kind])}</b> จริง ๆ?<br><code>${esc(label)}</code>`, 'ลบแถว'))) return;
+    try { await run(() => api('adminSheetOps', S.token, sh.kind, [{type:'deleteRow', r}]), 'กำลังลบแถว...'); toast('ลบแถวแล้ว'); S.sheet = null; await loadAdmin(true); } catch(e){ toast(e.message, true); }
+  });
+  body.querySelectorAll('[data-dc]').forEach(b => b.onclick = async () => {
+    const c = +b.dataset.dc;
+    if (c >= sh.origCols) {
+      const moved = [...S.sheetDirty.values()].filter(d => d.c !== c).map(d => d.c > c ? {...d, c:d.c-1} : d);
+      sh.values.forEach(row => row.splice(c, 1)); S.sheetDirty = new Map(moved.map(d => [d.r+','+d.c, d])); renderTab(); return;
+    }
+    if (!needSaved()) return;
+    const hdr = sh.values[0][c] || '(ไม่มีหัวคอลัมน์)';
+    if (!(await confirmBox(`ลบคอลัมน์ ${colName(c)}`, `ลบคอลัมน์ <b>${esc(hdr)}</b> พร้อมข้อมูลทุกแถวในคอลัมน์นี้ ออกจากชีต <b>${esc(SHEET_NAMES[sh.kind])}</b>?`, 'ลบคอลัมน์'))) return;
+    try { await run(() => api('adminSheetOps', S.token, sh.kind, [{type:'deleteCol', c}]), 'กำลังลบคอลัมน์...'); toast('ลบคอลัมน์แล้ว'); S.sheet = null; await loadAdmin(true); } catch(e){ toast(e.message, true); }
+  });
+}
+function refreshSheetBar(){
+  const bar = $('#shBar'); if (!bar) return;
+  const n = S.sheetDirty.size;
+  bar.querySelector('b').textContent = n;
+  bar.classList.toggle('hidden', !n);
+}
+
+/* ---- Extra admin actions: export, bulk score, import, view-as-student, settings ---- */
+function bindExtras(A, byId, body){
+  if (S.tab === 'sheets') bindSheet(body);
+
+  const ex = $('#bExport');
+  if (ex) ex.onclick = () => {
+    const list = filteredStudents(), stamp = new Date().toISOString().slice(0,10), cls = S.cls==='all' ? 'all' : S.cls.replace('/','-');
+    if (ex.dataset.x === 'students') {
+      downloadCSV(`students_${cls}_${stamp}.csv`, [['เลขที่','รหัส','ชื่อ-สกุล','ห้อง','Username','Password'], ...list.map(s => [s.number, s.stdId, s.name, s.cls, s.username, s.password])]);
+    } else {
+      const type = ex.dataset.x, items = A.items.filter(x => type==='status' ? x.inStatus : x.inScore);
+      const rows = list.filter(s => type==='status' ? s.inStatus : s.inScore).map(s => {
+        const vals = items.map(x => curVal(type, s, x.key) || (type==='status' ? 'ยังไม่ส่ง' : ''));
+        const extra = type==='score' ? [vals.reduce((a,v) => a + (num(v)||0), 0)] : [items.filter(x => isSubmitted(kindOf(curVal('status', s, x.key)))).length];
+        return [s.number, s.stdId, s.name, s.cls, ...vals, ...extra];
+      });
+      downloadCSV(`${type}_${cls}_${stamp}.csv`, [['เลขที่','รหัส','ชื่อ-สกุล','ห้อง', ...items.map(x => x.title + (type==='score' && x.max!=null ? ` (${x.max})` : '')), type==='score' ? 'รวม' : 'ส่งแล้ว'], ...rows]);
+    }
+    toast('ดาวน์โหลดไฟล์ CSV แล้ว');
+  };
+
+  const bs = $('#bfScore');
+  if (bs) bs.onclick = () => {
+    const key = $('#bsItem').value, x = A.items.find(i => i.key === key);
+    if (!x || x.max == null) return toast('ภาระงานนี้ไม่มีคะแนนเต็ม', true);
+    let n = 0;
+    filteredStudents().filter(s => s.inScore).forEach(s => {
+      if (curVal('score', s, key) !== '') return;
+      if (x.inStatus && !isSubmitted(kindOf(s.status[key]))) return;
+      setVal('score', s, key, String(x.max)); n++;
+    });
+    toast(n ? `เติมคะแนนเต็ม ${n} คน (ยังไม่บันทึก)` : 'ไม่มีช่องที่ต้องเติม');
+    renderTab();
+  };
+
+  const bi = $('#bImport');
+  if (bi) bi.onclick = () => modal({title:'นำเข้านักเรียนหลายคน', icon:'users', okText:'นำเข้า',
+    body:`<p style="margin-top:0;font-size:14px;line-height:1.7">คัดลอกจาก Excel / Google Sheets แล้ววางด้านล่าง <b>1 บรรทัดต่อ 1 คน</b><br>
+      ลำดับคอลัมน์: <code>เลขที่ | รหัสนักเรียน | ชื่อ-สกุล | ห้อง</code> (Username, Password ไม่บังคับ)</p>
+      <textarea class="txt mono" id="impText" style="min-height:180px;font-size:13px" placeholder="1&#9;05999&#9;เด็กหญิงตัวอย่าง ใจดี&#9;2/1"></textarea>
+      <p style="font-size:13px;color:var(--ink-3)"># Password ว่าง = ใช้รหัสนักเรียน • Username ว่าง = ชื่อจริง • คนที่มีชื่อหรือรหัสซ้ำจะถูกข้าม</p>`,
+    onOk: async w => {
+      const list = w.querySelector('#impText').value.split(/\r?\n/).map(l => l.trim()).filter(Boolean).map(l => {
+        const p = l.split(l.includes('\t') ? '\t' : ',').map(v => v.trim());
+        return {number:p[0]||'', stdId:p[1]||'', name:p[2]||'', cls:p[3]||'', username:p[4]||'', password:p[5]||''};
+      }).filter(s => !/^(เลขที่|no|number)$/i.test(s.number));
+      if (!list.length) { toast('ไม่พบข้อมูล', true); return false; }
+      const r = await run(() => api('adminImportStudents', S.token, list), `กำลังนำเข้า ${list.length} คน...`);
+      if (!r) return;
+      await loadAdmin(true);
+      if (r.skipped && r.skipped.length) modal({title:`นำเข้าแล้ว ${r.added} คน`, icon:'alert', cancelText:'ปิด', body:`<p style="margin-top:0">ข้าม ${r.skipped.length} รายการ:</p><ul style="line-height:1.7">${r.skipped.map(s => `<li>${esc(s)}</li>`).join('')}</ul>`});
+      else toast(`นำเข้าแล้ว ${r.added} คน`);
+    }});
+
+  body.querySelectorAll('[data-view]').forEach(b => b.onclick = async () => {
+    const s = byId(b.dataset.view);
+    try {
+      const d = await run(() => api('adminViewStudent', S.token, {name:s.name, stdId:s.stdId, cls:s.cls, number:s.number, username:s.username}), 'กำลังโหลดมุมมองนักเรียน...');
+      if (!d) return;
+      const sm = studentSummary(d.items);
+      const w = modal({title:`มุมมองนักเรียน: ${s.name}`, icon:'eye', cancelText:'ปิด', body:`<div class="preview-wrap">
+        <div class="profile" style="grid-template-columns:repeat(4,1fr);margin-bottom:12px">
+          <div class="pcard"><small>เลขที่</small><b>${esc(d.profile.number||'-')}</b></div><div class="pcard"><small>รหัส</small><b class="mono">${esc(d.profile.stdId||'-')}</b></div>
+          <div class="pcard"><small>ส่งแล้ว</small><b>${sm.submitted}/${sm.total}</b></div><div class="pcard"><small>คะแนนสะสม</small><b>${fmt(sm.got)}/${fmt(sm.totalMax)}</b></div></div>
+        <div class="grid">${d.items.map(taskCard).join('')}</div></div>`});
+      w.querySelector('.box').style.width = 'min(980px,100%)';
+      animateBars();
+    } catch(e){ toast(e.message, true); }
+  });
+
+  const ba = $('#bAppInfo');
+  if (ba) ba.onclick = async () => {
+    const info = {}; $('#appForm').querySelectorAll('[name]').forEach(i => info[i.name] = i.value.trim());
+    try { const r = await run(() => api('adminSetAppInfo', S.token, info), 'กำลังบันทึก...'); if (!r) return; A.app = r; applyApp(r); toast('บันทึกข้อมูลรายวิชาแล้ว'); } catch(e){ toast(e.message, true); }
+  };
+  const bo = $('#bStOpt');
+  if (bo) bo.onclick = async () => {
+    const list = $('#stOpts').value.split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+    try { const r = await run(() => api('adminSetStatusOptions', S.token, list), 'กำลังบันทึก...'); if (!r) return; A.statusOptions = r; toast('บันทึกตัวเลือกสถานะแล้ว'); renderTab(); } catch(e){ toast(e.message, true); }
+  };
 }
 
 /* ---- bind events for the current tab ---- */
@@ -1107,13 +1404,13 @@ function bindTab(){
   const bAI = $('#bAddItem');
   if (bAI) bAI.onclick = async () => {
     const f = $('#newItem'), g = n => f.querySelector(`[name=${n}]`);
-    const a = {title:g('title').value.trim(), max:g('max').value.trim(), link:g('link').value.trim(), toStatus:g('toStatus').checked, toScore:g('toScore').checked};
+    const a = {title:g('title').value.trim(), max:g('max').value.trim(), link:g('link').value.trim(), due:g('due').value, desc:g('desc').value.trim(), toStatus:g('toStatus').checked, toScore:g('toScore').checked};
     if (!a.title) return toast('กรุณาระบุชื่อภาระงาน', true);
     try { await run(() => api('adminAddAssignment', S.token, a), 'กำลังเพิ่มคอลัมน์...'); toast('เพิ่มภาระงานแล้ว'); await loadAdmin(true); } catch(e){ toast(e.message, true); }
   };
   body.querySelectorAll('[data-upd]').forEach(b => b.onclick = async () => {
     const row = b.closest('.aitem'), g = n => row.querySelector(`[name=${n}]`).value.trim();
-    try { await run(() => api('adminUpdateAssignment', S.token, {key:b.dataset.upd, title:g('title'), max:g('max'), link:g('link')}), 'กำลังบันทึก...'); toast('บันทึกภาระงานแล้ว'); await loadAdmin(true); } catch(e){ toast(e.message, true); }
+    try { await run(() => api('adminUpdateAssignment', S.token, {key:b.dataset.upd, title:g('title'), max:g('max'), link:g('link'), due:g('due'), desc:g('desc')}), 'กำลังบันทึก...'); toast('บันทึกภาระงานแล้ว'); await loadAdmin(true); } catch(e){ toast(e.message, true); }
   });
   body.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => {
     const key = b.dataset.rm;
@@ -1147,6 +1444,7 @@ function bindTab(){
   };
   const bApiClear = $('#bApiClear');
   if (bApiClear) bApiClear.onclick = () => { try { localStorage.removeItem('pyss_api'); } catch(e){} store.set(null); location.reload(); };
+  bindExtras(A, byId, body);
   const bCred = $('#bCred');
   if (bCred) bCred.onclick = async () => {
     const f = $('#credForm'), g = n => f.querySelector(`[name=${n}]`).value;
@@ -1224,7 +1522,7 @@ const LIVE = (() => {
   function table(values){
     const headers = (values[0] || []).map(clean);
     const rows = values.slice(1).filter(r => r.some(c => String(c).trim()));
-    return { headers, rows, col: fixedCols(headers) };
+    return { headers, rows, col: fixedCols(headers), raw: values };
   }
   const cell = (t, r, k) => t.col[k] >= 0 ? clean(r[t.col[k]]) : '';
   const aCols = t => { const fx = Object.values(t.col); return t.headers.map((h, i) => i).filter(i => t.headers[i] && !fx.includes(i)); };
@@ -1346,8 +1644,19 @@ const LIVE = (() => {
         updatedAt: new Date().toISOString()
       };
     },
+    async adminReadSheet(token, kind){
+      if (token !== 'admin:' + ADMIN_HASH.slice(0, 16)) throw new Error('SESSION_EXPIRED');
+      const D = await load(true), t = {login:D.lg, status:D.st, score:D.sc}[kind];
+      return { kind, name: SHEET_NAMES[kind], values: t.raw, formulas: [], url: `https://docs.google.com/spreadsheets/d/${SHEETS[kind]}/edit` };
+    },
+    async adminViewStudent(token, s){
+      if (token !== 'admin:' + ADMIN_HASH.slice(0, 16)) throw new Error('SESSION_EXPIRED');
+      const D = await load(false);
+      return studentData(D, { name: s.name, cls: s.cls, number: s.number, username: s.username || '', id: s.stdId || '' });
+    },
     adminSaveChanges: RO, adminAddAssignment: RO, adminUpdateAssignment: RO, adminDeleteAssignment: RO,
-    adminSaveStudent: RO, adminDeleteStudent: RO, adminSetAnnouncement: RO, adminChangeCredentials: RO
+    adminSaveStudent: RO, adminDeleteStudent: RO, adminSetAnnouncement: RO, adminChangeCredentials: RO,
+    adminSheetOps: RO, adminSetAppInfo: RO, adminSetStatusOptions: RO, adminImportStudents: RO
   };
 })();
 
@@ -1360,7 +1669,16 @@ const MOCK = (() => {
     ['W1:ใบงานที่ 1.1',3,1,1],['W2 : Basic Python',3,1,1],['W3 : print&input',4,1,1],['W4 : if...else',5,1,1],['W5 : if...elif...else',5,1,1],
     ['W6 : nested if',5,1,1],['W7 : While Loop',5,1,1],['W8 : For Loop',5,1,1],['Mid Test',20,0,1],['W9 : Function',null,1,1],['W10 : Ai for Python',null,1,1],['Mini Project',20,1,1]
   ].map(([title,max,st,sc]) => ({key: (title.includes(':')?title.split(':')[0]:title).toUpperCase().replace(/\s+/g,''), title, max, link:'', inStatus:!!st, inScore:!!sc}));
-  items[5].link = 'https://classroom.google.com/';
+  items[5].link = 'https://classroom.google.com/'; items[5].due = '2026-11-20'; items[5].desc = 'ทำโจทย์ nested if 5 ข้อ แล้วแนบไฟล์ .py';
+  items[6].due = '2026-12-04';
+  let statusOpts = ['ตรวจแล้ว','ส่งแล้ว','ส่งช้า','ส่งใหม่'];
+  const mockSheets = {};
+  const buildSheet = kind => {
+    if (kind === 'login') return [['Number','Name','Username','Password','Class'], ...students.map(s => [s.number, s.name, s.username, s.password, s.cls])];
+    const its = items.filter(x => kind === 'status' ? x.inStatus : x.inScore);
+    return [['Number','STD_ID','Name','Class', ...its.map(x => kind === 'score' && x.max != null ? `${x.title} (${x.max})` : x.title)],
+      ...students.map(s => [s.number, s.stdId, s.name, s.cls, ...its.map(x => (kind === 'status' ? s.status : s.score)[x.key] || '')])];
+  };
   let seed = 7; const rnd = () => (seed = (seed*9301+49297)%233280)/233280;
   const first = ['ตัวอย่าง','ภูมิ','ปัณณ์','ธาม','กันต์','ณิชา','พิมพ์','ใบเตย','ภัทร','ต้นกล้า','มายด์','ข้าวหอม'];
   const last = ['ทดสอบระบบ','ใจดี','รักเรียน','สุขสันต์','มั่นคง','ศรีสุข','แสงทอง','วงศ์ไพบูลย์'];
@@ -1390,7 +1708,7 @@ const MOCK = (() => {
   const need = (t, role) => { const s = sessions[t]; if (!s) throw new Error('SESSION_EXPIRED'); if (role && s.role!==role) throw new Error('ไม่มีสิทธิ์'); return s; };
   const findS = q => students.find(s => (q.stdId && s.stdId===q.stdId) || s.name===q.name);
   const stuData = s => ({ profile:{number:s.number, stdId:s.stdId, name:s.name, cls:s.cls, username:s.username},
-    items: items.map(x => ({key:x.key, title:x.title, max:x.max, link:x.link, hasStatus:x.inStatus, hasScore:x.inScore, status:s.status[x.key]||'', score:s.score[x.key]||''})),
+    items: items.map(x => ({key:x.key, title:x.title, max:x.max, link:x.link, due:x.due||'', desc:x.desc||'', hasStatus:x.inStatus, hasScore:x.inScore, status:s.status[x.key]||'', score:s.score[x.key]||''})),
     found:{status:true, score:true}, announce, updatedAt:new Date().toISOString() });
   return {
     getPublicInfo: () => ({app, announce}),
@@ -1398,11 +1716,21 @@ const MOCK = (() => {
     getStudentData(t){ return stuData(findS({name: need(t,'student').name})); },
     logout(t){ delete sessions[t]; return true; },
     adminLogin(u, p){ if (u!==admin.user || p!==admin.pass) throw new Error('ชื่อผู้ใช้หรือรหัสผ่านครูไม่ถูกต้อง'); return {token: tok({role:'admin'})}; },
-    adminGetData(t){ need(t,'admin'); return {app, items, students, classes:[...new Set(students.map(s=>s.cls))].sort(), statusOptions:['ตรวจแล้ว','ส่งแล้ว','ส่งช้า','ส่งใหม่'], announce, adminUser:admin.user,
+    adminGetData(t){ need(t,'admin'); return {app, items, students, classes:[...new Set(students.map(s=>s.cls))].sort(), statusOptions:statusOpts, announce, adminUser:admin.user,
       sheets:{login:'https://docs.google.com/spreadsheets/d/1lPC9ueFH1FVSBiSC_erp1eZGASi7EtmF1KUi-K5rfIE/edit', status:'https://docs.google.com/spreadsheets/d/1n5-IxePWdAiUkJMuHD725WFTBmzOq09jGAfZp_EMrgg/edit', score:'https://docs.google.com/spreadsheets/d/1jN1R_NomnCVPaW2Vou9qvU6H7r_WeZEJf0Iigyh8unE/edit'}, updatedAt:new Date().toISOString()}; },
     adminSaveChanges(t, ch){ need(t,'admin'); let saved=0; ch.forEach(c => { const s = findS(c); if (s){ (c.type==='status'?s.status:s.score)[c.key] = String(c.value); saved++; } }); return {saved, failed: ch.length-saved}; },
-    adminAddAssignment(t, a){ need(t,'admin'); const key = (a.title.includes(':')?a.title.split(':')[0]:a.title).toUpperCase().replace(/\s+/g,''); if (items.some(x=>x.key===key)) throw new Error(`มีภาระงานรหัส "${key}" อยู่แล้ว`); items.push({key, title:a.title, max:a.max===''?null:Number(a.max), link:a.link, inStatus:a.toStatus, inScore:a.toScore}); return {key}; },
-    adminUpdateAssignment(t, a){ need(t,'admin'); const x = items.find(x=>x.key===a.key); x.title=a.title; x.max=a.max===''?null:Number(a.max); x.link=a.link; return {key:x.key}; },
+    adminAddAssignment(t, a){ need(t,'admin'); const key = (a.title.includes(':')?a.title.split(':')[0]:a.title).toUpperCase().replace(/\s+/g,''); if (items.some(x=>x.key===key)) throw new Error(`มีภาระงานรหัส "${key}" อยู่แล้ว`); items.push({key, title:a.title, max:a.max===''?null:Number(a.max), link:a.link, due:a.due||'', desc:a.desc||'', inStatus:a.toStatus, inScore:a.toScore}); return {key}; },
+    adminUpdateAssignment(t, a){ need(t,'admin'); const x = items.find(x=>x.key===a.key); x.title=a.title; x.max=a.max===''?null:Number(a.max); x.link=a.link; x.due=a.due||''; x.desc=a.desc||''; return {key:x.key}; },
+    adminReadSheet(t, kind){ need(t,'admin'); const v = mockSheets[kind] || buildSheet(kind); return {kind, name:kind, values:v, formulas:[], url:'https://docs.google.com/spreadsheets/'}; },
+    adminSheetOps(t, kind, ops){ need(t,'admin'); const v = mockSheets[kind] = (mockSheets[kind] || buildSheet(kind)).map(r => r.slice());
+      ops.forEach(o => { if (o.type==='set'){ while (v.length <= o.r) v.push([]); v[o.r][o.c] = o.v; } else if (o.type==='deleteRow') v.splice(o.r,1); else if (o.type==='deleteCol') v.forEach(r => r.splice(o.c,1)); });
+      const W = Math.max(...v.map(r=>r.length)); v.forEach(r => { while (r.length < W) r.push(''); }); return {done: ops.length}; },
+    adminSetAppInfo(t, info){ need(t,'admin'); Object.keys(app).forEach(k => { if (info[k] != null && info[k] !== '' || k === 'logoUrl') app[k] = info[k] || (k==='logoUrl' ? '' : app[k]); }); return app; },
+    adminSetStatusOptions(t, list){ need(t,'admin'); if (!list.length) throw new Error('ต้องมีสถานะอย่างน้อย 1 รายการ'); statusOpts = [...new Set(list)]; return statusOpts; },
+    adminImportStudents(t, list){ need(t,'admin'); let added = 0; const skipped = [];
+      list.forEach(s => { if (students.some(x => x.name===s.name)) { skipped.push(s.name+' — มีอยู่แล้ว'); return; } students.push({number:s.number, stdId:s.stdId, name:s.name, cls:s.cls, username:s.username||s.name.split(' ')[0], password:s.password||s.stdId, status:{}, score:{}, inStatus:true, inScore:true, inLogin:true}); added++; });
+      return {added, skipped}; },
+    adminViewStudent(t, s){ need(t,'admin'); return stuData(findS(s)); },
     adminDeleteAssignment(t, key){ need(t,'admin'); const i = items.findIndex(x=>x.key===key); if (i>=0) items.splice(i,1); return true; },
     adminSaveStudent(t, v, orig){ need(t,'admin'); const s = orig ? findS(orig) : null; if (s) Object.assign(s, v); else students.push({...v, status:{}, score:{}, inStatus:true, inScore:true, inLogin:true}); return true; },
     adminDeleteStudent(t, orig){ need(t,'admin'); const i = students.indexOf(findS(orig)); if (i>=0) students.splice(i,1); return true; },

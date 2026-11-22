@@ -58,7 +58,10 @@ const API_FNS = {
   adminAddAssignment: adminAddAssignment, adminUpdateAssignment: adminUpdateAssignment,
   adminDeleteAssignment: adminDeleteAssignment, adminSaveStudent: adminSaveStudent,
   adminDeleteStudent: adminDeleteStudent, adminSetAnnouncement: adminSetAnnouncement,
-  adminChangeCredentials: adminChangeCredentials
+  adminChangeCredentials: adminChangeCredentials,
+  adminReadSheet: adminReadSheet, adminSheetOps: adminSheetOps, adminSetAppInfo: adminSetAppInfo,
+  adminSetStatusOptions: adminSetStatusOptions, adminImportStudents: adminImportStudents,
+  adminViewStudent: adminViewStudent
 };
 function doPost(e) {
   let out;
@@ -84,7 +87,7 @@ function testConnection() {
 }
 
 function getPublicInfo() {
-  return { app: CONFIG.APP, announce: props_().getProperty('ANNOUNCE') || '' };
+  return { app: appInfo_(), announce: props_().getProperty('ANNOUNCE') || '' };
 }
 
 /* ======================================================================
@@ -154,7 +157,7 @@ function buildStudentData_(sess) {
     },
     items: items.map(function (x) {
       return {
-        key: x.key, title: x.title, max: x.max, link: x.link,
+        key: x.key, title: x.title, max: x.max, link: x.link, due: x.due, desc: x.desc,
         hasStatus: x.stCol >= 0,
         hasScore: x.scCol >= 0,
         status: x.stCol >= 0 && sRow ? String(sRow[x.stCol]).trim() : '',
@@ -253,13 +256,13 @@ function adminGetData(token) {
   const classes = Array.from(new Set(students.map(function (s) { return s.cls; }).filter(String))).sort();
 
   return {
-    app: CONFIG.APP,
+    app: appInfo_(),
     items: items.map(function (x) {
-      return { key: x.key, title: x.title, max: x.max, link: x.link, inStatus: x.stCol >= 0, inScore: x.scCol >= 0 };
+      return { key: x.key, title: x.title, max: x.max, link: x.link, due: x.due, desc: x.desc, inStatus: x.stCol >= 0, inScore: x.scCol >= 0 };
     }),
     students: students,
     classes: classes,
-    statusOptions: STATUS_OPTIONS,
+    statusOptions: statusOptions_(),
     announce: props_().getProperty('ANNOUNCE') || '',
     adminUser: adminCreds_().user,
     sheets: {
@@ -313,7 +316,7 @@ function adminAddAssignment(token, a) {
     if (findColByKey_(st, key) >= 0 || findColByKey_(sc, key) >= 0) throw new Error('มีภาระงานรหัส "' + key + '" อยู่แล้ว');
     if (a.toStatus !== false) appendHeader_(st.sh, title);
     if (a.toScore !== false) appendHeader_(sc.sh, max != null ? title + ' (' + max + ')' : title);
-    setLink_(key, a.link);
+    setMeta_(key, a);
     return { key: key };
   });
 }
@@ -336,8 +339,8 @@ function adminUpdateAssignment(token, a) {
     if (c1 >= 0) st.sh.getRange(1, c1 + 1).setValue(title);
     const c2 = findColByKey_(sc, a.key);
     if (c2 >= 0) sc.sh.getRange(1, c2 + 1).setValue(max != null ? title + ' (' + max + ')' : title);
-    if (newKey !== a.key) setLink_(a.key, '');
-    setLink_(newKey, a.link);
+    if (newKey !== a.key) setMeta_(a.key, null);
+    setMeta_(newKey, a);
     return { key: newKey };
   });
 }
@@ -350,7 +353,7 @@ function adminDeleteAssignment(token, key) {
       const c = findColByKey_(t, key);
       if (c >= 0) t.sh.deleteColumn(c + 1);
     });
-    setLink_(key, '');
+    setMeta_(key, null);
     return true;
   });
 }
@@ -422,6 +425,124 @@ function adminChangeCredentials(token, currentPass, newUser, newPass) {
   if (p.length < 6) throw new Error('รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร');
   props_().setProperties({ ADMIN_USER: u, ADMIN_PASS: p });
   return true;
+}
+
+/* ---------- ตัวแก้ไขชีตแบบเต็ม (ทุกช่อง ทุกแถว ทุกคอลัมน์) ---------- */
+function adminReadSheet(token, kind) {
+  getSession_(token, 'admin');
+  const s = sheetOf_(kind), sh = s.sh;
+  const lr = Math.max(sh.getLastRow(), 1), lc = Math.max(sh.getLastColumn(), 1);
+  const rg = sh.getRange(1, 1, lr, lc);
+  return {
+    kind: kind, name: sh.getName(),
+    values: rg.getDisplayValues(),
+    formulas: rg.getFormulas().map(function (r) { return r.map(function (f) { return !!f; }); }),
+    url: sheetUrl_(s.id) + '#gid=' + sh.getSheetId()
+  };
+}
+
+/** ops: [{type:'set', r, c, v} | {type:'deleteRow', r} | {type:'deleteCol', c}]  (r, c เริ่มที่ 0; r=0 คือหัวตาราง) */
+function adminSheetOps(token, kind, ops) {
+  getSession_(token, 'admin');
+  if (!Array.isArray(ops) || !ops.length) return { done: 0 };
+  return withLock_(function () {
+    const sh = sheetOf_(kind).sh;
+    let done = 0;
+    ops.forEach(function (op) {
+      const r = Number(op.r), c = Number(op.c);
+      if (op.type === 'set') {
+        if (!(r >= 0 && c >= 0)) throw new Error('ตำแหน่งช่องไม่ถูกต้อง');
+        if (r + 1 > sh.getMaxRows()) sh.insertRowsAfter(sh.getMaxRows(), r + 1 - sh.getMaxRows());
+        if (c + 1 > sh.getMaxColumns()) sh.insertColumnsAfter(sh.getMaxColumns(), c + 1 - sh.getMaxColumns());
+        sh.getRange(r + 1, c + 1).setValue(cellVal_(op.v));
+      } else if (op.type === 'deleteRow') {
+        if (!(r >= 1)) throw new Error('ลบแถวหัวตารางไม่ได้');
+        if (r + 1 <= sh.getLastRow()) sh.deleteRow(r + 1);
+      } else if (op.type === 'deleteCol') {
+        if (!(c >= 0)) throw new Error('ตำแหน่งคอลัมน์ไม่ถูกต้อง');
+        if (c + 1 <= sh.getLastColumn()) sh.deleteColumn(c + 1);
+      } else throw new Error('คำสั่งไม่ถูกต้อง');
+      done++;
+    });
+    SpreadsheetApp.flush();
+    return { done: done };
+  });
+}
+
+/* ---------- ตั้งค่าระบบ ---------- */
+function adminSetAppInfo(token, info) {
+  getSession_(token, 'admin');
+  const out = {};
+  Object.keys(CONFIG.APP).forEach(function (k) { out[k] = String((info && info[k]) || '').trim().slice(0, 200); });
+  if (out.logoUrl && !/^https:\/\//i.test(out.logoUrl)) throw new Error('URL โลโก้ต้องขึ้นต้นด้วย https://');
+  props_().setProperty('APP', JSON.stringify(out));
+  return appInfo_();
+}
+
+function adminSetStatusOptions(token, list) {
+  getSession_(token, 'admin');
+  const seen = {};
+  const clean = (Array.isArray(list) ? list : []).map(function (s) { return String(s || '').trim(); })
+    .filter(function (s) { if (!s || seen[s]) return false; seen[s] = true; return true; }).slice(0, 12);
+  if (!clean.length) throw new Error('ต้องมีสถานะอย่างน้อย 1 รายการ');
+  props_().setProperty('STATUS_OPTIONS', JSON.stringify(clean));
+  return clean;
+}
+
+/* ---------- นำเข้านักเรียนหลายคน ---------- */
+function adminImportStudents(token, list) {
+  getSession_(token, 'admin');
+  if (!Array.isArray(list) || !list.length) throw new Error('ไม่มีข้อมูลนักเรียน');
+  return withLock_(function () {
+    const lg = readTable_('login'), st = readTable_('status'), sc = readTable_('score');
+    const names = {}, pws = {};
+    lg.rows.forEach(function (r) {
+      names[normName_(cell_(lg, r, 'name'))] = true;
+      const p = cell_(lg, r, 'password'); if (p) pws[normId_(p)] = true;
+    });
+    const txt = function (v) { return v === '' ? '' : "'" + v; };
+    const add = { login: [], status: [], score: [] };
+    const skipped = [];
+    list.forEach(function (s) {
+      const rec = {
+        number: String(s.number || '').trim(), stdId: String(s.stdId || '').trim(),
+        name: normName_(s.name), cls: String(s.cls || '').trim(),
+        username: String(s.username || '').trim(), password: String(s.password || '').trim()
+      };
+      if (!rec.password) rec.password = rec.stdId;
+      if (!rec.username) rec.username = firstName_(rec.name);
+      if (!rec.name || !rec.cls || !rec.password) { skipped.push((rec.name || '(ไม่มีชื่อ)') + ' — ข้อมูลไม่ครบ'); return; }
+      if (names[rec.name]) { skipped.push(rec.name + ' — มีอยู่แล้ว'); return; }
+      if (pws[normId_(rec.password)]) { skipped.push(rec.name + ' — รหัสซ้ำ'); return; }
+      names[rec.name] = true; pws[normId_(rec.password)] = true;
+      const num = rec.number !== '' && !isNaN(Number(rec.number)) ? Number(rec.number) : rec.number;
+      add.login.push(buildRow_(lg, { number: num, name: rec.name, username: rec.username, password: txt(rec.password), cls: rec.cls }));
+      add.status.push(buildRow_(st, { number: num, stdId: txt(rec.stdId), name: rec.name, cls: rec.cls }));
+      add.score.push(buildRow_(sc, { number: num, stdId: txt(rec.stdId), name: rec.name, cls: rec.cls }));
+    });
+    [[lg, add.login], [st, add.status], [sc, add.score]].forEach(function (p) {
+      const t = p[0], rows = p[1];
+      if (!rows.length) return;
+      t.sh.getRange(t.sh.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+    });
+    SpreadsheetApp.flush();
+    return { added: add.login.length, skipped: skipped };
+  });
+}
+
+function buildRow_(t, map) {
+  const arr = new Array(Math.max(t.headers.length, 1)).fill('');
+  Object.keys(map).forEach(function (k) { const c = t.col[k]; if (c >= 0) arr[c] = map[k]; });
+  return arr;
+}
+
+/** ครูดูหน้าจอแบบเดียวกับที่นักเรียนเห็น */
+function adminViewStudent(token, s) {
+  getSession_(token, 'admin');
+  return buildStudentData_({
+    role: 'student', name: s.name, cls: s.cls, number: s.number,
+    username: s.username || '', password: s.stdId || s.password || ''
+  });
 }
 
 /* ======================================================================
@@ -567,8 +688,11 @@ function mergeItems_(st, sc) {
       last++;
     }
   });
-  const links = getLinks_();
-  list.forEach(function (x) { x.link = links[x.key] || ''; });
+  const meta = getMeta_();
+  list.forEach(function (x) {
+    const m = meta[x.key] || {};
+    x.link = m.link || ''; x.due = m.due || ''; x.desc = m.desc || '';
+  });
   return list;
 }
 
@@ -616,13 +740,64 @@ function appendHeader_(sh, text) {
   sh.getRange(1, lc + 1).setValue(text);
 }
 
-function getLinks_() {
-  try { return JSON.parse(props_().getProperty('LINKS') || '{}'); } catch (e) { return {}; }
+function getJSONProp_(k, d) {
+  try { const v = props_().getProperty(k); return v ? JSON.parse(v) : d; } catch (e) { return d; }
 }
-function setLink_(key, url) {
-  const links = getLinks_();
-  url = String(url || '').trim();
-  if (url && !/^https?:\/\//i.test(url)) throw new Error('ลิงก์ส่งงานต้องขึ้นต้นด้วย http:// หรือ https://');
-  if (url) links[key] = url; else delete links[key];
-  props_().setProperty('LINKS', JSON.stringify(links));
+
+/** ข้อมูลเสริมของภาระงาน {KEY: {link, due, desc}} — เก็บใน Script Properties */
+function getMeta_() {
+  const meta = getJSONProp_('ITEM_META', {});
+  const legacy = getJSONProp_('LINKS', {}); // รองรับข้อมูลลิงก์รุ่นเก่า
+  Object.keys(legacy).forEach(function (k) { meta[k] = meta[k] || {}; if (!meta[k].link) meta[k].link = legacy[k]; });
+  return meta;
+}
+function setMeta_(key, a) {
+  const meta = getMeta_();
+  if (!a) delete meta[key];
+  else {
+    const link = String(a.link || '').trim();
+    if (link && !/^https?:\/\//i.test(link)) throw new Error('ลิงก์ส่งงานต้องขึ้นต้นด้วย http:// หรือ https://');
+    const due = String(a.due || '').trim();
+    if (due && !/^\d{4}-\d{2}-\d{2}$/.test(due)) throw new Error('รูปแบบวันกำหนดส่งไม่ถูกต้อง');
+    const m = { link: link, due: due, desc: String(a.desc || '').trim().slice(0, 300) };
+    if (m.link || m.due || m.desc) meta[key] = m; else delete meta[key];
+  }
+  props_().setProperty('ITEM_META', JSON.stringify(meta));
+  props_().deleteProperty('LINKS');
+}
+
+function appInfo_() {
+  const saved = getJSONProp_('APP', {});
+  const out = {};
+  Object.keys(CONFIG.APP).forEach(function (k) { out[k] = saved[k] != null && saved[k] !== '' ? saved[k] : CONFIG.APP[k]; });
+  return out;
+}
+function statusOptions_() {
+  const s = getJSONProp_('STATUS_OPTIONS', null);
+  return Array.isArray(s) && s.length ? s : STATUS_OPTIONS;
+}
+
+function sheetOf_(kind) {
+  const cfg = {
+    login: [CONFIG.LOGIN_SHEET_ID, CONFIG.LOGIN_TAB],
+    status: [CONFIG.STATUS_SHEET_ID, CONFIG.STATUS_TAB],
+    score: [CONFIG.SCORE_SHEET_ID, CONFIG.SCORE_TAB]
+  }[kind];
+  if (!cfg) throw new Error('ไม่รู้จักชีต ' + kind);
+  return { id: cfg[0], sh: openTab_(cfg[0], cfg[1]) };
+}
+
+/** แปลงข้อความที่ครูพิมพ์ให้เป็นค่าที่เหมาะกับชีต (คงเลข 0 นำหน้า เช่น รหัสนักเรียน) */
+function cellVal_(v) {
+  v = v == null ? '' : String(v);
+  const t = v.trim();
+  if (t === '') return '';
+  if (/^0\d+$/.test(t)) return "'" + t;
+  if (/^-?\d+(\.\d+)?$/.test(t)) return Number(t);
+  if (/^[=+]/.test(t)) return "'" + t; // ไม่รับสูตรจากหน้าเว็บ
+  return v;
+}
+
+function firstName_(name) {
+  return String(name || '').replace(/^(เด็กชาย|เด็กหญิง|นาย|นางสาว|นาง|ด\.ช\.|ด\.ญ\.)\s*/, '').split(' ')[0];
 }
