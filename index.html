@@ -325,6 +325,14 @@ table.sx{border-collapse:separate;border-spacing:0;font-size:13.5px}
 .ce:focus{background:#fffbe6;box-shadow:inset 0 0 0 2px var(--py-yellow)}
 .ce.dirty{background:#fff6cc}
 .ce[readonly]{color:#7a8ca0;font-style:italic}
+select.cs{cursor:pointer;font-weight:600;font-size:13px;padding:6px 8px;border-radius:0;min-width:120px}
+select.cs.done{background:var(--done-bg);color:#137a47}
+select.cs.sent{background:var(--sent-bg);color:#0369a1}
+select.cs.late{background:var(--late-bg);color:#b8461a}
+select.cs.redo{background:var(--redo-bg);color:#6431d6}
+select.cs.todo{background:#fff;color:#98a6b6;font-weight:400}
+select.cs option{background:#fff;color:var(--ink);font-weight:400}
+select.cs.dirty{box-shadow:inset 0 0 0 2.5px var(--py-yellow)}
 .xbtn{border:0;background:none;color:#c4ccd6;cursor:pointer;padding:2px;display:inline-grid;vertical-align:middle}
 .xbtn:hover{color:var(--danger)}
 .xbtn svg{width:14px;height:14px}
@@ -1209,8 +1217,16 @@ function tabSheets(){
     ${sh && sh.url ? `<a class="btn sm ghost" href="${esc(sh.url)}" target="_blank" rel="noopener">${ic('ext')} Google Sheets</a>` : ''}</div>`;
   if (!sh || sh.kind !== kind) { loadSheet(); return head + `<div class="empty">&gt;&gt;&gt; กำลังโหลดชีต ${esc(SHEET_NAMES[kind])}...</div>`; }
   const V = sh.values, W = V[0].length;
+  // ชีตสถานะ: คอลัมน์ภาระงาน (ไม่ใช่ เลขที่/รหัส/ชื่อ/ห้อง) แสดงเป็น drop-down
+  const FIXED = /^(number|no|เลขที่|std_?id|studentid|รหัส.*|name|ชื่อ.*|class|ห้อง|ชั้น|username|user|password|pass)$/i;
+  const isStatusCol = c => kind === 'status' && !FIXED.test(String(sheetVal(0, c)).replace(/\s+/g,'').trim()) && String(sheetVal(0, c)).trim() !== '';
+  const statusSel = (r, c, v, dirty) => {
+    const opts = ['', ...S.admin.statusOptions]; if (v && !opts.includes(v)) opts.push(v);
+    return `<select class="ce cs ${kindOf(v)} ${dirty?'dirty':''}" data-r="${r}" data-c="${c}">${opts.map(o => `<option value="${esc(o)}" ${o===v?'selected':''}>${o ? esc(o) : '— ยังไม่ส่ง —'}</option>`).join('')}</select>`;
+  };
   const rows = V.map((row, r) => `<tr class="${r===0?'hdr':''}"><td class="rn">${r+1}${r>0?` <button class="xbtn" data-dr="${r}" title="ลบแถว ${r+1}">${ic('x')}</button>`:''}</td>${
     row.map((_, c) => { const f = sh.formulas[r] && sh.formulas[r][c]; const dirty = S.sheetDirty.has(r+','+c);
+      if (r > 0 && !f && isStatusCol(c)) return `<td>${statusSel(r, c, String(sheetVal(r,c)).trim(), dirty)}</td>`;
       return `<td><input class="ce ${dirty?'dirty':''}" data-r="${r}" data-c="${c}" value="${esc(sheetVal(r,c))}" ${f?'readonly title="ช่องนี้เป็นสูตร — แก้ใน Google Sheets"':''}></td>`; }).join('')}</tr>`).join('');
   const n = S.sheetDirty.size;
   return head + `
@@ -1242,7 +1258,16 @@ function bindSheet(body){
     S.sheet = null; S.sheetDirty.clear(); renderTab();
   };
   if (!sh || sh.kind !== S.sheetKind) return;
-  const focusCell = (r, c) => { const el = body.querySelector(`.ce[data-r="${r}"][data-c="${c}"]`); if (el) { el.focus(); el.select(); } };
+  const focusCell = (r, c) => { const el = body.querySelector(`.ce[data-r="${r}"][data-c="${c}"]`); if (el) { el.focus(); if (el.select && el.tagName === 'INPUT') el.select(); } };
+  body.querySelectorAll('select.ce').forEach(sel => {
+    const r = +sel.dataset.r, c = +sel.dataset.c;
+    sel.onchange = () => {
+      setSheetCell(r, c, sel.value);
+      sel.className = `ce cs ${kindOf(sel.value)} ${S.sheetDirty.has(r+','+c)?'dirty':''}`;
+      refreshSheetBar();
+    };
+    sel.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); focusCell(r + (e.shiftKey ? -1 : 1), c); } };
+  });
   body.querySelectorAll('input.ce').forEach(inp => {
     const r = +inp.dataset.r, c = +inp.dataset.c;
     inp.oninput = () => { setSheetCell(r, c, inp.value); inp.classList.toggle('dirty', S.sheetDirty.has(r+','+c)); refreshSheetBar(); };
