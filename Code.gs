@@ -50,6 +50,29 @@ function doGet() {
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
+/** JSON API สำหรับหน้าเว็บที่โฮสต์ภายนอก (เช่น GitHub Pages)
+ *  POST body (text/plain): {"fn":"adminLogin","args":["user","pass"]} → {"ok":true,"data":...} */
+const API_FNS = {
+  getPublicInfo: getPublicInfo, studentLogin: studentLogin, getStudentData: getStudentData, logout: logout,
+  adminLogin: adminLogin, adminGetData: adminGetData, adminSaveChanges: adminSaveChanges,
+  adminAddAssignment: adminAddAssignment, adminUpdateAssignment: adminUpdateAssignment,
+  adminDeleteAssignment: adminDeleteAssignment, adminSaveStudent: adminSaveStudent,
+  adminDeleteStudent: adminDeleteStudent, adminSetAnnouncement: adminSetAnnouncement,
+  adminChangeCredentials: adminChangeCredentials
+};
+function doPost(e) {
+  let out;
+  try {
+    const req = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    const fn = API_FNS[req.fn];
+    if (!fn) throw new Error('ไม่รู้จักคำสั่ง ' + req.fn);
+    out = { ok: true, data: fn.apply(null, Array.isArray(req.args) ? req.args : []) };
+  } catch (err) {
+    out = { ok: false, error: String(err && err.message || err) };
+  }
+  return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
+}
+
 /** รันฟังก์ชันนี้ 1 ครั้งใน Editor เพื่ออนุญาตสิทธิ์และตรวจการเชื่อมต่อชีต */
 function testConnection() {
   ['login', 'status', 'score'].forEach(function (k) {
