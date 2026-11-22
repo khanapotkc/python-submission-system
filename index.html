@@ -701,7 +701,7 @@ function renderLogin(mode='student', err=''){
           <button type="button" class="eye" id="eye" aria-label="แสดงรหัสผ่าน">${ic('eye')}</button></div></div></div>
         <div class="eline"><span class="no">6</span><span></span></div>` : `
         <div class="eline"><span class="no">4</span><div class="field"><span class="var">student_id</span><span class="eq">=</span>
-          <div class="inp"><input id="lu" name="student_id" placeholder="รหัสนักเรียน เช่น 05867" inputmode="numeric" pattern="[0-9 ]*" maxlength="10" autocomplete="off" required
+          <div class="inp"><input id="lu" name="student_id" placeholder="รหัสนักเรียน เช่น 12345" inputmode="numeric" pattern="[0-9 ]*" maxlength="10" autocomplete="off" required
             style="font-family:var(--mono);font-size:19px;letter-spacing:3px"></div></div></div>
         <div class="eline"><span class="no">5</span><span></span></div>`}
         <button class="run" type="submit">${ic('play')} ${isAdmin?'admin.login()':'login(student_id)'}</button>
