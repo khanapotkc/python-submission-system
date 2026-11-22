@@ -332,12 +332,6 @@ table.sx{border-collapse:separate;border-spacing:0;font-size:13.5px}
 .preview-wrap .grid{grid-template-columns:repeat(2,1fr);gap:14px}
 @media (max-width:700px){.preview-wrap .grid{grid-template-columns:1fr}}
 
-/* ---------- read-only (LIVE) ---------- */
-.ro .ce,.ro #appForm,.ro #stForm{pointer-events:none}
-.ro .xbtn,.ro #shAddRow,.ro #shAddCol,.ro #bAppInfo,.ro #bStOpt,.ro #bImport,.ro #bfScore,.ro .shsave{display:none!important}
-.ro #bfGo,.ro #bAddStu,.ro [data-edit],.ro [data-del],.ro [data-upd],.ro [data-rm],.ro #bAddItem,.ro #bAnn,.ro #bAnnClear,.ro #bCred,.ro .savebar{display:none!important}
-.ro .toolbar.panel,.ro #newItem,.ro #credForm,.ro #annText{opacity:.55;pointer-events:none}
-.ro select.ss,.ro input.si,.ro .aitem input{pointer-events:none}
 
 /* ---------- responsive ---------- */
 @media (max-width:1080px){
@@ -471,7 +465,45 @@ const fmt = n => n==null ? '–' : (Math.round(n*100)/100).toLocaleString('th-TH
 const API_URL = '';
 const apiUrl = () => { try { return localStorage.getItem('pyss_api') || API_URL; } catch(e){ return API_URL; } };
 const IS_GAS = typeof google !== 'undefined' && google.script && google.script.run;
-const MODE = IS_GAS ? 'gas' : (/[?&]demo=1/.test(location.search) ? 'demo' : (apiUrl() ? 'api' : 'live'));
+let MODE = IS_GAS ? 'gas' : (/[?&]demo=1/.test(location.search) ? 'demo' : (apiUrl() ? 'api' : 'live'));
+/* คำสั่งที่เขียนลงชีต — ถ้ายังไม่เชื่อมต่อ ระบบจะขอเชื่อมต่อครั้งเดียวอัตโนมัติ แล้วทำคำสั่งนั้นต่อทันที */
+const WRITE_FNS = new Set(['adminSaveChanges','adminAddAssignment','adminUpdateAssignment','adminDeleteAssignment','adminSaveStudent',
+  'adminDeleteStudent','adminSetAnnouncement','adminChangeCredentials','adminSheetOps','adminSetAppInfo','adminSetStatusOptions','adminImportStudents']);
+let connecting = null;
+function connectOnce(){
+  if (connecting) return connecting;
+  connecting = new Promise(resolve => {
+    let done = false;
+    const w = modal({title:'เชื่อมต่อ Google Sheets (ครั้งแรกครั้งเดียว)', icon:'link', okText:'เชื่อมต่อและบันทึก', body:`
+      <p style="margin-top:0;line-height:1.7">เพื่อให้บันทึกลง Google Sheets ได้ ต้องเชื่อมต่อกับ Apps Script ของครู <b>เพียงครั้งเดียว</b> — หลังจากนั้นแก้ไขได้ทันทีทุกครั้ง</p>
+      <label style="font-size:14px;display:block;margin-bottom:10px">URL ของ Apps Script (ลงท้าย /exec)
+        <input class="txt mono" id="cUrl" style="width:100%;margin-top:6px;font-size:13px" placeholder="https://script.google.com/macros/s/.../exec" value="${esc(apiUrl())}"></label>
+      <label style="font-size:14px;display:block">ยืนยันรหัสผ่านครู
+        <input class="txt" id="cPw" type="password" style="width:100%;margin-top:6px" autocomplete="current-password"></label>
+      <details style="margin-top:12px;font-size:13.5px;color:var(--ink-2);line-height:1.8"><summary style="cursor:pointer">ยังไม่มี URL? วิธีสร้าง (5 นาที)</summary>
+        <ol style="padding-left:20px;margin:6px 0">
+          <li>เปิด <a href="https://script.google.com/home/projects/create" target="_blank" rel="noopener">script.google.com</a> → โครงการใหม่</li>
+          <li>วางโค้ด <a href="https://github.com/khanapotkc/python-submission-system/blob/main/Code.gs" target="_blank" rel="noopener">Code.gs</a> → เรียกใช้ <code>testConnection</code> → อนุญาตสิทธิ์</li>
+          <li>ทำให้ใช้งานได้ → รายการใหม่ → เว็บแอป • เรียกใช้ในฐานะ: ฉัน • ผู้มีสิทธิ์เข้าถึง: ทุกคน</li>
+          <li>คัดลอก URL /exec มาวางด้านบน</li></ol></details>`,
+      onOk: async box => {
+        const url = box.querySelector('#cUrl').value.trim(), pw = box.querySelector('#cPw').value;
+        if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(url)) { toast('URL ต้องขึ้นต้นด้วย https://script.google.com/ และลงท้ายด้วย /exec', true); return false; }
+        if (!pw) { toast('กรุณายืนยันรหัสผ่านครู', true); return false; }
+        try {
+          const r = await callApi(url, 'adminLogin', [S.admin ? S.admin.adminUser : 'khanapot', pw]);
+          try { localStorage.setItem('pyss_api', url); } catch(e){}
+          MODE = 'api'; S.token = r.token; store.set({token:r.token, role:'admin'});
+          if (S.admin) S.admin.readOnly = false;
+          const b = document.querySelector('.demo-badge'); if (b) { b.style.background = '#3776ab'; b.textContent = '● CONNECTED • Apps Script'; }
+          done = true; resolve(true); toast('เชื่อมต่อสำเร็จ — กำลังบันทึก...');
+        } catch(e){ toast(e.message, true); return false; }
+      }});
+    w.style.zIndex = 58;
+    w.addEventListener('click', e => { if (!done && (e.target === w || e.target.closest('[data-x]'))) resolve(false); });
+  }).finally(() => { connecting = null; });
+  return connecting;
+}
 async function callApi(url, fn, args){
   let r;
   try { r = await fetch(url, { method:'POST', redirect:'follow', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify({fn, args}) }); }
@@ -482,6 +514,12 @@ async function callApi(url, fn, args){
   return j.data;
 }
 function api(fn, ...args){
+  if (MODE === 'live' && WRITE_FNS.has(fn)) {
+    return connectOnce().then(ok => {
+      if (!ok) throw new Error('');           // ครูปิดหน้าต่าง — การแก้ไขยังอยู่ ยังไม่บันทึก
+      return callApi(apiUrl(), fn, [S.token, ...args.slice(1)]);
+    });
+  }
   if (MODE === 'api') return callApi(apiUrl(), fn, args);
   return new Promise((resolve, reject) => {
     if (IS_GAS) {
@@ -525,6 +563,7 @@ async function run(promiseFn, text){
   finally { loading(false); }
 }
 function toast(msg, isErr){
+  if (!msg) return;
   const el = document.createElement('div');
   el.className = 'toast' + (isErr ? ' err' : '');
   el.textContent = msg;
@@ -866,10 +905,7 @@ function renderAdmin(){
       ${[['login','Login นักเรียน','users'],['status','สถานะการส่ง','checkc'],['score','คะแนน','star']].map(([k,l,i]) =>
         `<a class="gs-btn" href="${esc(A.sheets[k])}" target="_blank" rel="noopener"><span class="gs-ic">${ic('file')}</span><span><b>${l}</b><small>Google Sheets</small></span>${ic('ext','class="gs-ext"')}</a>`).join('')}
     </div>
-    ${A.readOnly ? `<div class="announce" style="background:#eaf6ff;border-color:#7cc4f0;color:#0b4a6f;align-items:center">${ic('file')}<div style="flex:1"><b>โหมดดูอย่างเดียว</b> — ข้อมูลดึงจาก Google Sheets โดยตรง
-เชื่อมต่อ Apps Script หนึ่งครั้ง เพื่อแก้สถานะ คะแนน นักเรียน และภาระงานจากหน้านี้ได้เลย</div><button class="btn sm pri" id="bGoApi" style="white-space:nowrap">${ic('link')} เปิดโหมดแก้ไข</button></div>` : ''}
     ${tabs}${filters}<div id="tabBody"></div>`;
-  document.body.classList.toggle('ro', !!A.readOnly);
   $('#app').innerHTML = winShell('admin_panel.py',
     `<button class="btn sm" id="bRefresh">${ic('refresh')}<span class="lbl">อัพเดท</span></button><button class="btn sm" id="bOut">${ic('logout')}<span class="lbl">ออก</span></button>`, body);
   document.querySelectorAll('.atabs button').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; renderAdmin(); });
@@ -1088,7 +1124,7 @@ function apiPanel(){
   if (MODE === 'gas') return '';
   const connected = MODE === 'api';
   return `<div class="panel" id="apiPanel" style="border:2px solid ${connected?'var(--done)':'var(--py-yellow)'}">
-    <h3>${ic('link','width="20" height="20"')} เชื่อมต่อ Apps Script <span class="mono">${connected?'● เชื่อมต่อแล้ว — แก้ไขได้':'○ ยังไม่เชื่อมต่อ — ดูอย่างเดียว'}</span></h3>
+    <h3>${ic('link','width="20" height="20"')} เชื่อมต่อ Apps Script <span class="mono">${connected?'● เชื่อมต่อแล้ว':'○ ยังไม่เชื่อมต่อ — ระบบจะถามเองเมื่อบันทึกครั้งแรก'}</span></h3>
     ${connected ? '' : `<ol style="margin:0 0 12px;padding-left:20px;line-height:1.8;font-size:14px;color:var(--ink-2)">
       <li>เปิด <a href="https://script.google.com/home/projects/create" target="_blank" rel="noopener">script.google.com</a> → โครงการใหม่ (บัญชีที่แก้ไขชีตได้)</li>
       <li>วางโค้ด <a href="https://github.com/khanapotkc/python-submission-system/blob/main/Code.gs" target="_blank" rel="noopener">Code.gs</a> แล้วกด <b>เรียกใช้</b> ฟังก์ชัน <code>testConnection</code> เพื่ออนุญาตสิทธิ์</li>
