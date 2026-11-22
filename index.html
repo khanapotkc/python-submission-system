@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ระบบส่งงาน | การเขียนโปรแกรมคอมพิวเตอร์ ม.2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy-950:#050d1a; --navy-900:#081527; --navy-800:#0d2038; --navy-700:#13304f;
+  --py-blue:#3776ab; --py-blue-2:#4b8bbe; --py-blue-d:#1f4e79;
+  --py-yellow:#ffd43b; --py-yellow-2:#ffe873;
+  --ink:#0f2236; --ink-2:#4a5d73; --ink-3:#8a9bb0;
+  --panel:#eef3f9; --card:#ffffff; --line:#dbe4ef;
+  --done:#22a565; --done-bg:#e3f6ec;
+  --sent:#0ea5e9; --sent-bg:#e0f4fd;
+  --late:#f0703a; --late-bg:#fdebe2;
+  --redo:#8b5cf6; --redo-bg:#efe9fe;
+  --todo:#f5a524; --todo-bg:#fff4dc;
+  --exam:#3776ab; --exam-bg:#e4eef8;
+  --danger:#e5484d;
+  --radius:18px;
+  --mono:'JetBrains Mono',ui-monospace,Consolas,monospace;
+  --sans:'Prompt',system-ui,sans-serif;
+  --shadow:0 10px 30px -12px rgba(8,21,39,.28),0 2px 6px rgba(8,21,39,.06);
+}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%}
+body{font-family:var(--sans);color:var(--ink);background:var(--navy-950);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+a{color:inherit}
+.mono{font-family:var(--mono)}
+.hidden{display:none!important}
+
+/* ---------- background ---------- */
+.bg{position:fixed;inset:0;z-index:-1;overflow:hidden;
+  background:radial-gradient(1200px 600px at 85% -10%,rgba(55,118,171,.35),transparent 60%),
+             radial-gradient(900px 500px at -10% 110%,rgba(255,212,59,.12),transparent 60%),
+             linear-gradient(180deg,var(--navy-900),var(--navy-950));}
+.bg::before{content:"";position:absolute;inset:0;
+  background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);
+  background-size:42px 42px;mask-image:linear-gradient(180deg,#000 0%,transparent 75%)}
+.float{position:absolute;font-family:var(--mono);color:rgba(140,180,220,.13);font-size:15px;white-space:nowrap;animation:drift linear infinite;user-select:none}
+@keyframes drift{from{transform:translateY(110vh)}to{transform:translateY(-20vh)}}
+@media (prefers-reduced-motion:reduce){.float{animation:none;display:none}}
+
+/* ---------- header ---------- */
+.top{max-width:1280px;margin:0 auto;padding:22px 24px 18px;display:flex;align-items:center;gap:22px}
+.logo{width:84px;height:84px;flex:none;display:grid;place-items:center;border-radius:22px;
+  background:linear-gradient(145deg,var(--py-blue),var(--py-blue-d));box-shadow:0 0 0 3px rgba(255,212,59,.5),0 12px 30px -8px rgba(55,118,171,.7);overflow:hidden}
+.logo img{width:100%;height:100%;object-fit:contain;background:#fff}
+.logo svg{width:56px;height:56px}
+.titles h1{margin:0;font-size:clamp(22px,3vw,32px);font-weight:700;color:var(--py-yellow);letter-spacing:.2px;line-height:1.2}
+.titles h1 .acc{color:#fff}
+.titles .sub{color:#fff;font-weight:600;font-size:clamp(14px,1.6vw,17px);margin-top:4px}
+.titles .meta{color:#b8c9dc;font-size:clamp(12px,1.3vw,14.5px);margin-top:2px}
+.term{margin-left:auto;width:min(380px,32vw);background:rgba(5,13,26,.75);border:1px solid rgba(255,212,59,.35);border-radius:14px;
+  padding:10px 14px 12px;font-family:var(--mono);font-size:12.5px;color:#9fc3e7;box-shadow:inset 0 0 0 1px rgba(255,255,255,.03)}
+.term .dots{display:flex;gap:6px;margin-bottom:8px}
+.term .dots i{width:9px;height:9px;border-radius:50%;background:#ff5f57}.term .dots i:nth-child(2){background:#febc2e}.term .dots i:nth-child(3){background:#28c840}
+.term .ln{min-height:18px;white-space:pre;overflow:hidden;text-overflow:ellipsis}
+.term .p{color:var(--py-yellow)} .term .k{color:#ff79c6} .term .s{color:#a5e075} .term .f{color:#7fd3ff}
+.caret{display:inline-block;width:7px;height:14px;background:var(--py-yellow);vertical-align:-2px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+.rule{height:2px;background:linear-gradient(90deg,transparent,var(--py-yellow),transparent);opacity:.55;max-width:1280px;margin:0 auto}
+
+/* ---------- main window ---------- */
+main{max-width:1280px;margin:26px auto 40px;padding:0 24px}
+.win{background:var(--panel);border-radius:26px;box-shadow:0 30px 80px -30px rgba(0,0,0,.6);overflow:hidden;animation:rise .45s ease both}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.winbar{display:flex;align-items:center;gap:14px;padding:14px 22px;background:#e2eaf3;border-bottom:1px solid var(--line)}
+.winbar .dots{display:flex;gap:7px}.winbar .dots i{width:12px;height:12px;border-radius:50%;background:#ff5f57}
+.winbar .dots i:nth-child(2){background:#febc2e}.winbar .dots i:nth-child(3){background:#28c840}
+.winbar .path{font-family:var(--mono);font-size:13px;color:var(--ink-2)}
+.winbar .path b{color:var(--py-blue)}
+.winbar .acts{margin-left:auto;display:flex;gap:10px}
+.winbody{padding:26px 28px 32px}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:2px solid var(--py-blue-d);background:#fff;color:var(--py-blue-d);
+  padding:9px 18px;border-radius:12px;font-weight:600;cursor:pointer;transition:.18s;text-decoration:none;white-space:nowrap}
+.btn:hover{background:var(--py-blue-d);color:#fff;transform:translateY(-1px)}
+.btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.btn svg{width:18px;height:18px}
+.btn.sm{padding:6px 12px;font-size:13.5px;border-radius:10px;border-width:1.5px}
+.btn.pri{background:linear-gradient(135deg,var(--py-blue),var(--py-blue-d));color:#fff;border-color:transparent}
+.btn.pri:hover{filter:brightness(1.1)}
+.btn.yel{background:var(--py-yellow);border-color:var(--py-yellow);color:var(--navy-900)}
+.btn.yel:hover{background:var(--py-yellow-2)}
+.btn.ghost{border-color:var(--line);color:var(--ink-2)}
+.btn.ghost:hover{background:var(--ink);border-color:var(--ink);color:#fff}
+.btn.danger{border-color:var(--danger);color:var(--danger)}
+.btn.danger:hover{background:var(--danger);color:#fff}
+
+.sec-title{display:flex;align-items:center;gap:12px;margin:0 0 18px}
+.sec-title h2{margin:0;font-size:22px;font-weight:700;position:relative;padding-bottom:8px}
+.sec-title h2::after{content:"";position:absolute;left:0;bottom:0;width:100%;height:3px;border-radius:3px;background:var(--py-yellow)}
+.sec-title .ico{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;background:var(--py-blue);color:#fff}
+.sec-title .ico svg{width:20px;height:20px}
+.sec-title .side{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}
+
+/* ---------- login ---------- */
+.login-wrap{display:grid;grid-template-columns:1.05fr .95fr;gap:34px;align-items:center;padding:20px 0}
+.hero h2{font-size:clamp(28px,4vw,46px);line-height:1.15;margin:0 0 14px;color:#fff;font-weight:700}
+.hero h2 span{background:linear-gradient(90deg,var(--py-yellow),#ffb703);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:#b8c9dc;font-size:16px;line-height:1.7;margin:0 0 22px;max-width:520px}
+.hero .code{font-family:var(--mono);background:rgba(5,13,26,.6);border:1px solid rgba(255,255,255,.08);border-radius:16px;padding:16px 18px;color:#cfe0f2;font-size:14px;line-height:1.75;max-width:520px}
+.code .c{color:#6f8aa6}.code .k{color:#ff79c6}.code .f{color:#7fd3ff}.code .s{color:#a5e075}.code .n{color:#ffb86c}.code .y{color:var(--py-yellow)}
+.chips{display:flex;gap:10px;flex-wrap:wrap;margin-top:20px}
+.chip{display:inline-flex;align-items:center;gap:8px;padding:7px 13px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);color:#d9e6f3;font-size:13.5px}
+.chip i{width:9px;height:9px;border-radius:50%}
+
+.editor{background:#0b1b2e;border-radius:22px;border:1px solid rgba(255,212,59,.28);box-shadow:0 40px 80px -30px rgba(0,0,0,.8);overflow:hidden;animation:rise .5s ease both}
+.editor .bar{display:flex;align-items:center;gap:8px;padding:12px 16px;background:#081526;border-bottom:1px solid rgba(255,255,255,.06)}
+.editor .bar i{width:11px;height:11px;border-radius:50%;background:#ff5f57}.editor .bar i:nth-child(2){background:#febc2e}.editor .bar i:nth-child(3){background:#28c840}
+.tabs{display:flex;margin-left:14px;gap:4px}
+.tabs button{background:none;border:0;padding:7px 14px;border-radius:9px 9px 0 0;color:#7f97b2;font-family:var(--mono);font-size:13px;cursor:pointer;display:flex;align-items:center;gap:7px}
+.tabs button.on{background:#0b1b2e;color:var(--py-yellow);box-shadow:inset 0 2px 0 var(--py-yellow)}
+.editor form{padding:18px 22px 24px;font-family:var(--mono);color:#cfe0f2}
+.eline{display:grid;grid-template-columns:26px 1fr;align-items:center;gap:12px;min-height:34px;font-size:14px}
+.eline .no{color:#3d5673;text-align:right;font-size:12.5px}
+.field{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.field .var{color:#7fd3ff}.field .eq{color:#ff79c6}
+.inp{position:relative;flex:1;min-width:180px}
+.inp input{width:100%;background:#06111f;border:1.5px solid #1d3654;border-radius:10px;padding:11px 40px 11px 14px;color:#a5e075;font-family:var(--sans);font-size:15.5px;outline:none;transition:.2s}
+.inp input:focus{border-color:var(--py-yellow);box-shadow:0 0 0 4px rgba(255,212,59,.13)}
+.inp input::placeholder{color:#43607f}
+.inp .eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);background:none;border:0;color:#58779a;cursor:pointer;padding:4px;display:grid}
+.inp .eye svg{width:18px;height:18px}
+.run{margin-top:14px;width:100%;padding:14px;border:0;border-radius:12px;cursor:pointer;font-family:var(--mono);font-weight:700;font-size:15px;
+  background:linear-gradient(135deg,var(--py-yellow),#ffb703);color:var(--navy-900);display:flex;align-items:center;justify-content:center;gap:10px;transition:.2s}
+.run:hover{transform:translateY(-1px);box-shadow:0 10px 24px -8px rgba(255,212,59,.6)}
+.run svg{width:18px;height:18px}
+.hint{margin-top:14px;font-size:12.5px;color:#6f8aa6;line-height:1.7}
+.err{margin-top:12px;padding:10px 12px;border-radius:10px;background:rgba(229,72,77,.12);border:1px solid rgba(229,72,77,.4);color:#ff9a9d;font-family:var(--sans);font-size:14px}
+.announce-dark{margin-top:22px;max-width:520px;padding:14px 16px;border-radius:14px;background:rgba(255,212,59,.08);border:1px dashed rgba(255,212,59,.45);color:#ffe9a3;font-size:14.5px;line-height:1.6;white-space:pre-wrap}
+
+/* ---------- student ---------- */
+.hello{font-family:var(--mono);font-size:15px;color:var(--ink-2);margin:-4px 0 18px}
+.hello .f{color:#0a7bb8}.hello .s{color:#2f8f3a}
+.profile{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:18px}
+.pcard{background:#fff;border-radius:16px;padding:14px 18px;border-left:5px solid var(--py-blue);box-shadow:var(--shadow)}
+.pcard small{display:block;color:var(--ink-2);font-weight:500;font-size:13px}
+.pcard b{display:block;font-size:20px;margin-top:2px;word-break:break-word}
+.stats{display:grid;grid-template-columns:1.1fr 1.2fr 1.7fr;gap:16px;margin-bottom:22px}
+.stat{background:#fff;border-radius:18px;padding:18px 20px;box-shadow:var(--shadow);display:flex;align-items:center;gap:18px}
+.ring{position:relative;width:96px;height:96px;flex:none}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring .v{position:absolute;inset:0;display:grid;place-items:center;font-weight:700;font-size:21px}
+.ring circle{fill:none;stroke-width:10}
+.ring .tr{stroke:#e6edf5}.ring .pg{stroke-linecap:round;transition:stroke-dashoffset 1s cubic-bezier(.2,.8,.2,1)}
+.stat h4{margin:0;font-size:14px;color:var(--ink-2);font-weight:500}
+.stat .big{font-size:28px;font-weight:700;line-height:1.2}
+.stat .big small{font-size:15px;color:var(--ink-3);font-weight:500}
+.bar{height:10px;border-radius:99px;background:#e6edf5;overflow:hidden;margin-top:8px}
+.bar>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--py-blue),var(--py-blue-2));transition:width 1s cubic-bezier(.2,.8,.2,1)}
+.counts{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;width:100%}
+.cnt{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;font-size:14px;font-weight:500}
+.cnt b{margin-left:auto;font-size:18px}
+.cnt svg{width:18px;height:18px}
+.k-done{background:var(--done-bg);color:#137a47}.k-sent{background:var(--sent-bg);color:#0369a1}
+.k-late{background:var(--late-bg);color:#b8461a}.k-redo{background:var(--redo-bg);color:#6431d6}
+.k-todo{background:var(--todo-bg);color:#9a5b00}.k-exam{background:var(--exam-bg);color:var(--py-blue-d)}
+.announce{display:flex;gap:12px;align-items:flex-start;padding:14px 18px;border-radius:14px;background:#fffbea;border:1.5px dashed #f2c94c;margin-bottom:20px;color:#6b5200;white-space:pre-wrap;line-height:1.6}
+.announce svg{width:22px;height:22px;flex:none;color:#d49b00;margin-top:2px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.filters button{border:1.5px solid var(--line);background:#fff;padding:8px 16px;border-radius:999px;cursor:pointer;font-weight:500;color:var(--ink-2);transition:.15s}
+.filters button.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.filters button span{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 6px;border-radius:99px;background:rgba(0,0,0,.07);margin-left:6px;font-size:12.5px}
+.filters button.on span{background:rgba(255,255,255,.2)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+.task{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;animation:rise .45s ease both;transition:transform .2s,box-shadow .2s}
+.task:hover{transform:translateY(-4px);box-shadow:0 22px 40px -18px rgba(8,21,39,.35)}
+.task .hd{display:flex;align-items:center;gap:10px;padding:14px 18px;color:#fff;font-weight:600;font-size:16.5px}
+.task .hd .tag{font-family:var(--mono);font-size:13px;font-weight:700;background:rgba(255,255,255,.22);padding:3px 9px;border-radius:8px;flex:none}
+.task .hd .tt{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.task .hd svg{width:20px;height:20px;margin-left:auto;flex:none;opacity:.9}
+.task.done .hd{background:linear-gradient(120deg,#22a565,#4cc485)}
+.task.sent .hd{background:linear-gradient(120deg,#0284c7,#38bdf8)}
+.task.late .hd{background:linear-gradient(120deg,#e35d24,#f7925b)}
+.task.redo .hd{background:linear-gradient(120deg,#7444e8,#a585fa)}
+.task.todo .hd{background:linear-gradient(120deg,#f59e0b,#ffbe4d)}
+.task.exam .hd{background:linear-gradient(120deg,var(--py-blue-d),var(--py-blue-2))}
+.task .bd{padding:20px 22px 20px;display:flex;flex-direction:column;flex:1}
+.task .row{display:flex;align-items:center;gap:16px}
+.st-ico{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;flex:none}
+.st-ico svg{width:30px;height:30px}
+.done .st-ico{background:var(--done);color:#fff}.sent .st-ico{background:var(--sent);color:#fff}
+.late .st-ico{background:var(--late);color:#fff}.redo .st-ico{background:var(--redo);color:#fff}
+.todo .st-ico{background:var(--todo-bg);color:var(--todo)}.exam .st-ico{background:var(--exam-bg);color:var(--exam)}
+.task .stx b{display:block;font-size:21px}
+.task .stx small{color:var(--ink-3);font-size:13.5px}
+.score{margin-top:16px;padding-top:14px;border-top:3px solid var(--py-yellow)}
+.score .l{display:flex;align-items:baseline;justify-content:space-between;font-size:14px;color:var(--ink-2)}
+.score .l b{font-size:22px;color:var(--ink)} .score .l b small{font-size:14px;color:var(--ink-3);font-weight:500}
+.score .bar>i{background:linear-gradient(90deg,var(--py-yellow),#f5b300)}
+.score .na{font-size:13.5px;color:var(--ink-3);font-style:italic}
+.task .ft{margin-top:auto;padding-top:16px;display:flex;justify-content:center}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;font-size:13.5px;font-weight:500}
+.pill svg{width:15px;height:15px}
+.empty{grid-column:1/-1;text-align:center;padding:40px;color:var(--ink-3);font-family:var(--mono)}
+.foot-note{margin-top:22px;font-size:12.5px;color:var(--ink-3);text-align:right;font-family:var(--mono)}
+
+/* ---------- admin ---------- */
+.atabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;background:#fff;padding:6px;border-radius:14px;box-shadow:var(--shadow)}
+.atabs button{border:0;background:none;padding:10px 16px;border-radius:10px;cursor:pointer;font-weight:500;color:var(--ink-2);display:flex;align-items:center;gap:8px}
+.atabs button svg{width:18px;height:18px}
+.atabs button.on{background:var(--py-blue-d);color:#fff}
+.atabs button:not(.on):hover{background:var(--panel)}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+.toolbar .grow{flex:1}
+.sel,.txt{border:1.5px solid var(--line);background:#fff;border-radius:11px;padding:9px 12px;outline:none;min-width:0}
+.sel:focus,.txt:focus{border-color:var(--py-blue)}
+.search{position:relative;min-width:220px}
+.search svg{position:absolute;left:11px;top:50%;transform:translateY(-50%);width:17px;height:17px;color:var(--ink-3)}
+.search input{padding-left:36px;width:100%}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px}
+.kpi{background:#fff;border-radius:16px;padding:16px 18px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.kpi small{color:var(--ink-2);font-size:13.5px}
+.kpi b{display:block;font-size:30px;line-height:1.25}
+.kpi .ic{position:absolute;right:14px;top:14px;width:40px;height:40px;border-radius:12px;display:grid;place-items:center}
+.kpi .ic svg{width:21px;height:21px}
+.panel{background:#fff;border-radius:18px;padding:18px 20px;box-shadow:var(--shadow);margin-bottom:18px}
+.panel h3{margin:0 0 14px;font-size:17px;display:flex;align-items:center;gap:10px}
+.panel h3 .mono{font-size:12px;color:var(--ink-3);font-weight:400}
+.two{display:grid;grid-template-columns:1.5fr 1fr;gap:18px}
+.srow{display:grid;grid-template-columns:150px 1fr 54px;gap:12px;align-items:center;margin:9px 0;font-size:14px}
+.srow .nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.srow .nm b{font-family:var(--mono);color:var(--py-blue-d)}
+.stack{display:flex;height:16px;border-radius:99px;overflow:hidden;background:#eef2f7}
+.stack i{display:block;height:100%}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--ink-2);margin-bottom:6px}
+.legend span{display:flex;align-items:center;gap:6px}.legend i{width:11px;height:11px;border-radius:3px}
+.cls-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.clsc{border:1.5px solid var(--line);border-radius:14px;padding:12px 14px}
+.clsc b{font-size:18px}.clsc small{color:var(--ink-3)}
+.follow{max-height:420px;overflow:auto}
+.fl{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px dashed var(--line);font-size:14px}
+.fl .n{flex:1;min-width:0}.fl .n small{display:block;color:var(--ink-3);font-size:12.5px}
+.fl .miss{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end;max-width:55%}
+.mtag{font-family:var(--mono);font-size:11.5px;padding:2px 7px;border-radius:6px;background:var(--todo-bg);color:#9a5b00}
+.mtag.r{background:var(--redo-bg);color:#6431d6}
+.badge{display:inline-grid;place-items:center;min-width:28px;height:28px;padding:0 8px;border-radius:9px;font-weight:700;font-size:14px;background:#fde8e8;color:#c0262c}
+
+.tbl-wrap{overflow:auto;max-height:68vh;border-radius:14px;border:1px solid var(--line);background:#fff}
+table.gt{border-collapse:separate;border-spacing:0;width:100%;font-size:14px}
+.gt th,.gt td{padding:7px 9px;border-bottom:1px solid #edf1f6;text-align:center;white-space:nowrap}
+.gt thead th{position:sticky;top:0;background:#f4f7fb;z-index:2;font-weight:600;font-size:13px;vertical-align:bottom}
+.gt th .tg{font-family:var(--mono);color:var(--py-blue-d);font-size:13px}
+.gt th small{display:block;color:var(--ink-3);font-weight:400;font-size:11.5px;max-width:110px;overflow:hidden;text-overflow:ellipsis}
+.gt .stk{position:sticky;background:#fff;z-index:1;text-align:left}
+.gt thead .stk{z-index:3;background:#f4f7fb}
+.gt .c0{left:0;min-width:56px;text-align:center}.gt .c1{left:56px;min-width:230px;box-shadow:6px 0 8px -6px rgba(0,0,0,.12)}
+.gt tbody tr:hover td{background:#f8fbff}
+.gt td.l{text-align:left}
+.ss{appearance:none;-webkit-appearance:none;border:0;border-radius:8px;padding:6px 10px;font-size:13px;font-weight:600;cursor:pointer;min-width:94px;text-align:center;text-align-last:center}
+.ss.done{background:var(--done-bg);color:#137a47}.ss.sent{background:var(--sent-bg);color:#0369a1}.ss.late{background:var(--late-bg);color:#b8461a}
+.ss.redo{background:var(--redo-bg);color:#6431d6}.ss.todo{background:#f3f5f8;color:#98a6b6}
+.dirty{outline:2.5px solid var(--py-yellow);outline-offset:1px}
+.si{width:62px;border:1.5px solid var(--line);border-radius:8px;padding:6px 4px;text-align:center;outline:none;font-family:var(--mono)}
+.si:focus{border-color:var(--py-blue)}
+.si.over{border-color:var(--danger);background:#fff0f0;color:var(--danger)}
+.savebar{position:sticky;bottom:14px;margin-top:16px;display:flex;align-items:center;gap:12px;padding:12px 16px;border-radius:14px;background:var(--navy-800);color:#fff;box-shadow:0 18px 40px -14px rgba(0,0,0,.5);animation:rise .3s ease both;z-index:5}
+.savebar .grow{flex:1;font-family:var(--mono);font-size:14px}
+.savebar .grow b{color:var(--py-yellow)}
+.pw{font-family:var(--mono);cursor:pointer;border-bottom:1px dashed var(--ink-3)}
+.warn{color:var(--late);font-size:12px}
+.alist{display:grid;gap:12px}
+.aitem{display:grid;grid-template-columns:90px 1.6fr 90px 1.8fr auto;gap:10px;align-items:center;background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:12px 14px}
+.aitem .k{font-family:var(--mono);font-weight:700;color:var(--py-blue-d)}
+.aitem .flags{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+.flag{font-size:11px;padding:2px 7px;border-radius:6px;background:#eef2f7;color:var(--ink-2)}
+.flag.on{background:var(--done-bg);color:#137a47}
+.form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.form-grid label{display:flex;flex-direction:column;gap:5px;font-size:13.5px;color:var(--ink-2);font-weight:500}
+.form-grid .full{grid-column:1/-1}
+.chk{display:flex!important;flex-direction:row!important;align-items:center;gap:8px}
+textarea.txt{min-height:110px;resize:vertical;width:100%;line-height:1.6}
+
+/* ---------- overlay ---------- */
+.loading{position:fixed;inset:0;background:rgba(5,13,26,.55);backdrop-filter:blur(3px);display:grid;place-items:center;z-index:50}
+.loading .box{background:#0b1b2e;border:1px solid rgba(255,212,59,.35);border-radius:16px;padding:18px 26px;font-family:var(--mono);color:#cfe0f2;display:flex;align-items:center;gap:12px}
+.spin{width:22px;height:22px;border-radius:50%;border:3px solid rgba(255,212,59,.25);border-top-color:var(--py-yellow);animation:sp .8s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.toasts{position:fixed;right:18px;bottom:18px;display:flex;flex-direction:column;gap:10px;z-index:60}
+.toast{background:#0b1b2e;color:#fff;padding:12px 16px;border-radius:12px;border-left:4px solid var(--done);box-shadow:0 14px 30px -10px rgba(0,0,0,.5);font-size:14.5px;animation:rise .3s ease both;max-width:360px}
+.toast.err{border-left-color:var(--danger)}
+.modal{position:fixed;inset:0;background:rgba(5,13,26,.6);backdrop-filter:blur(3px);display:grid;place-items:center;z-index:40;padding:16px}
+.modal .box{background:#fff;border-radius:20px;width:min(560px,100%);max-height:90vh;overflow:auto;box-shadow:0 40px 80px -20px rgba(0,0,0,.6);animation:rise .3s ease both}
+.modal .mh{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--line);font-weight:700;font-size:17px}
+.modal .mh button{margin-left:auto;border:0;background:none;cursor:pointer;color:var(--ink-3);display:grid}
+.modal .mb{padding:18px 20px}
+.modal .mf{display:flex;justify-content:flex-end;gap:10px;padding:14px 20px;border-top:1px solid var(--line)}
+.demo-badge{position:fixed;left:14px;bottom:14px;z-index:70;background:var(--py-yellow);color:var(--navy-900);font-family:var(--mono);font-size:12px;font-weight:700;padding:6px 12px;border-radius:999px;box-shadow:0 6px 16px rgba(0,0,0,.3)}
+
+.sheet-links{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:-4px 0 18px}
+.sheet-links .mono{font-size:13px;color:var(--ink-3);margin-right:4px}
+.gs-btn{display:flex;align-items:center;gap:10px;padding:8px 14px 8px 8px;border-radius:12px;background:#fff;border:1.5px solid #cfe9d8;text-decoration:none;box-shadow:var(--shadow);transition:.18s}
+.gs-btn:hover{border-color:#0f9d58;transform:translateY(-2px)}
+.gs-btn .gs-ic{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;background:#0f9d58;color:#fff}
+.gs-btn .gs-ic svg{width:19px;height:19px}
+.gs-btn b{display:block;font-size:14px;line-height:1.2}
+.gs-btn small{display:block;font-size:11.5px;color:#0f9d58}
+.gs-btn .gs-ext{width:15px;height:15px;color:var(--ink-3);margin-left:4px}
+
+/* ---------- read-only (LIVE) ---------- */
+.ro #bfGo,.ro #bAddStu,.ro [data-edit],.ro [data-del],.ro [data-upd],.ro [data-rm],.ro #bAddItem,.ro #bAnn,.ro #bAnnClear,.ro #bCred,.ro .savebar{display:none!important}
+.ro .toolbar.panel,.ro #newItem,.ro #credForm,.ro #annText{opacity:.55;pointer-events:none}
+.ro select.ss,.ro input.si,.ro .aitem input{pointer-events:none}
+
+/* ---------- responsive ---------- */
+@media (max-width:1080px){
+  .grid{grid-template-columns:repeat(2,1fr)}
+  .stats{grid-template-columns:1fr 1fr}.stats .stat:last-child{grid-column:1/-1}
+  .two{grid-template-columns:1fr}
+  .aitem{grid-template-columns:80px 1fr 80px;}.aitem .lk{grid-column:1/-1}.aitem .ac{grid-column:1/-1;justify-content:flex-end}
+}
+@media (max-width:860px){
+  .term{display:none}
+  .login-wrap{grid-template-columns:1fr}
+  .profile{grid-template-columns:repeat(2,1fr)}
+  .kpis{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:600px){
+  .top{padding:16px;gap:14px}.logo{width:60px;height:60px;border-radius:16px}.logo svg{width:40px;height:40px}
+  main{padding:0 12px;margin-top:16px}
+  .winbody{padding:18px 16px 24px}.winbar{padding:12px 14px}.winbar .path{display:none}
+  .grid,.stats{grid-template-columns:1fr}
+  .profile{gap:10px}.pcard b{font-size:17px}
+  .counts{grid-template-columns:1fr 1fr}
+  .form-grid{grid-template-columns:1fr}
+  .srow{grid-template-columns:90px 1fr 44px}
+  .btn .lbl{display:none}
+  .cls-cards{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="bg" id="bg"></div>
+
+<header class="top">
+  <div class="logo" id="logo"></div>
+  <div class="titles">
+    <h1 id="appTitle">ระบบส่งงานและดูคะแนน</h1>
+    <div class="sub" id="appSubject">การเขียนโปรแกรมคอมพิวเตอร์</div>
+    <div class="meta" id="appLevel">ชั้นมัธยมศึกษาปีที่ 2 ภาคเรียนที่ 2 ปีการศึกษา 2569</div>
+    <div class="sub" id="appSchool" style="font-size:14px">โรงเรียนวิทยาศาสตร์จุฬาภรณราชวิทยาลัย เชียงราย</div>
+  </div>
+  <div class="term" aria-hidden="true">
+    <div class="dots"><i></i><i></i><i></i></div>
+    <div class="ln" id="t1"></div><div class="ln" id="t2"></div><div class="ln" id="t3"></div>
+  </div>
+</header>
+<div class="rule"></div>
+
+<main id="app"></main>
+<div class="toasts" id="toasts"></div>
+<div id="overlay"></div>
+
+<script>
+/* =====================================================================
+ *  Icons
+ * =================================================================== */
+const IC = {
+  check:'<path d="M20 6 9 17l-5-5"/>',
+  checkc:'<circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>',
+  hourglass:'<path d="M5 22h14M5 2h14M17 22v-4.17a2 2 0 0 0-.59-1.42L12 12l-4.41 4.41A2 2 0 0 0 7 17.83V22M7 2v4.17a2 2 0 0 0 .59 1.42L12 12l4.41-4.41A2 2 0 0 0 17 6.17V2"/>',
+  clock:'<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+  refresh:'<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+  inbox:'<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+  send:'<path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/>',
+  logout:'<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
+  play:'<path d="m6 3 14 9-14 9V3z"/>',
+  eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+  eyeoff:'<path d="M9.9 4.24A9 9 0 0 1 12 4c6.5 0 10 8 10 8a18 18 0 0 1-2.16 3.19M6.6 6.6A18 18 0 0 0 2 12s3.5 8 10 8a9.7 9.7 0 0 0 5.4-1.6"/><path d="m2 2 20 20"/><path d="M14.1 14.1a3 3 0 1 1-4.2-4.2"/>',
+  list:'<path d="M3 6h.01M3 12h.01M3 18h.01M8 6h13M8 12h13M8 18h13"/>',
+  chart:'<path d="M3 3v18h18"/><path d="M7 16v-5M12 16V8M17 16v-9"/>',
+  users:'<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+  star:'<path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>',
+  book:'<path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/><path d="M8 7h8M8 11h6"/>',
+  gear:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  edit:'<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/>',
+  trash:'<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+  link:'<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+  mega:'<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
+  search:'<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  x:'<path d="M18 6 6 18M6 6l12 12"/>',
+  alert:'<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4M12 17h.01"/>',
+  save:'<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>',
+  file:'<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><path d="m10 13-2 2 2 2M14 17l2-2-2-2"/>',
+  user:'<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+  shield:'<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+  ext:'<path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>',
+  wand:'<path d="m15 4-1 1M19 8l-1 1M17 2v2M21 6h-2M3 21l12-12M14 6l4 4"/>'
+};
+const ic = (n, extra='') => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" ${extra}>${IC[n]||''}</svg>`;
+const esc = s => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $ = s => document.querySelector(s);
+
+const LOGO_SVG = `<svg viewBox="0 0 64 64" fill="none"><path d="M22 20 10 32l12 12" stroke="#ffd43b" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M42 20l12 12-12 12" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/><path d="M36 14 28 50" stroke="#ffd43b" stroke-width="5" stroke-linecap="round" opacity=".9"/></svg>`;
+
+/* =====================================================================
+ *  Status helpers
+ * =================================================================== */
+const KIND = {
+  done:{label:'ตรวจแล้ว', desc:'ครูตรวจเรียบร้อยแล้ว', icon:'check', color:'var(--done)'},
+  sent:{label:'ส่งแล้ว', desc:'ส่งแล้ว รอครูตรวจ', icon:'inbox', color:'var(--sent)'},
+  late:{label:'ส่งช้า', desc:'ส่งหลังกำหนด', icon:'clock', color:'var(--late)'},
+  redo:{label:'ส่งใหม่', desc:'แก้ไขงานแล้วส่งใหม่อีกครั้ง', icon:'refresh', color:'var(--redo)'},
+  todo:{label:'ยังไม่ส่ง', desc:'ยังไม่พบการส่งงาน', icon:'hourglass', color:'var(--todo)'},
+  exam:{label:'การสอบ', desc:'คะแนนสอบ', icon:'star', color:'var(--exam)'}
+};
+function kindOf(v){
+  v = String(v||'').trim();
+  if(!v) return 'todo';
+  if(v.includes('ตรวจแล้ว')) return 'done';
+  if(v.includes('ช้า')) return 'late';
+  if(v.includes('ใหม่') || v.includes('แก้')) return 'redo';
+  if(v.includes('ยังไม่')) return 'todo';
+  return 'sent';
+}
+const isSubmitted = k => k==='done' || k==='sent' || k==='late';
+function splitTitle(t){
+  const i = String(t).indexOf(':');
+  return i>0 ? {tag:t.slice(0,i).trim(), name:t.slice(i+1).trim()} : {tag:'', name:String(t).trim()};
+}
+const num = v => { const n = parseFloat(v); return isNaN(n) ? null : n; };
+const fmt = n => n==null ? '–' : (Math.round(n*100)/100).toLocaleString('th-TH');
+
+/* =====================================================================
+ *  API (Apps Script or demo mock)
+ * =================================================================== */
+/* โหมดการทำงาน
+ *  - GAS  : ติดตั้งบน Google Apps Script → อ่าน/เขียนชีตได้ครบ (Code.gs)
+ *  - LIVE : เปิดไฟล์นี้ตรง ๆ / โฮสต์ที่อื่น → อ่านข้อมูลจริงจาก Google Sheets ที่แชร์แบบ "ทุกคนที่มีลิงก์" (อ่านอย่างเดียว)
+ *  - DEMO : เติม ?demo=1 ท้าย URL → ข้อมูลจำลอง */
+const IS_GAS = typeof google !== 'undefined' && google.script && google.script.run;
+const MODE = IS_GAS ? 'gas' : (/[?&]demo=1/.test(location.search) ? 'demo' : 'live');
+function api(fn, ...args){
+  return new Promise((resolve, reject) => {
+    if (IS_GAS) {
+      google.script.run.withSuccessHandler(resolve).withFailureHandler(e => reject(new Error(String(e && e.message || e).replace(/^(Error|Exception):\s*/,''))))[fn](...args);
+    } else {
+      const B = MODE === 'demo' ? MOCK : LIVE;
+      setTimeout(() => {
+        try { Promise.resolve(B[fn](...args)).then(v => resolve(JSON.parse(JSON.stringify(v))), reject); }
+        catch(e){ reject(e); }
+      }, MODE === 'demo' ? 350 : 0);
+    }
+  });
+}
+
+const store = {
+  get(){ try { return JSON.parse(sessionStorage.getItem('pyss')||'null'); } catch(e){ return null; } },
+  set(v){ try { v ? sessionStorage.setItem('pyss', JSON.stringify(v)) : sessionStorage.removeItem('pyss'); } catch(e){} }
+};
+
+const S = { token:null, role:null, app:null, announce:'', student:null, filter:'all',
+            admin:null, tab:'overview', cls:'all', q:'', dirty:new Map(), showPw:false };
+
+/* =====================================================================
+ *  UI utilities
+ * =================================================================== */
+let loadingCount = 0;
+function loading(on, text='กำลังประมวลผล...'){
+  loadingCount += on ? 1 : -1;
+  const ov = $('#overlay');
+  const existing = ov.querySelector('.loading');
+  if (loadingCount > 0 && !existing) ov.insertAdjacentHTML('beforeend', `<div class="loading"><div class="box"><div class="spin"></div><span>&gt;&gt;&gt; ${esc(text)}<span class="caret"></span></span></div></div>`);
+  if (loadingCount <= 0) { loadingCount = 0; existing && existing.remove(); }
+}
+async function run(promiseFn, text){
+  loading(true, text);
+  try { return await promiseFn(); }
+  catch(e){
+    if (String(e.message).includes('SESSION_EXPIRED')) { toast('หมดเวลาเข้าสู่ระบบ กรุณาเข้าสู่ระบบใหม่', true); doLogout(true); return null; }
+    throw e;
+  }
+  finally { loading(false); }
+}
+function toast(msg, isErr){
+  const el = document.createElement('div');
+  el.className = 'toast' + (isErr ? ' err' : '');
+  el.textContent = msg;
+  $('#toasts').appendChild(el);
+  setTimeout(() => el.remove(), 3800);
+}
+function modal({title, icon='edit', body, okText='บันทึก', okClass='pri', onOk, cancelText='ยกเลิก'}){
+  const ov = $('#overlay');
+  const wrap = document.createElement('div');
+  wrap.className = 'modal';
+  wrap.innerHTML = `<div class="box" role="dialog" aria-modal="true">
+    <div class="mh">${ic(icon,'width="20" height="20"')}<span>${esc(title)}</span><button data-x aria-label="ปิด">${ic('x','width="22" height="22"')}</button></div>
+    <div class="mb">${body}</div>
+    <div class="mf"><button class="btn ghost" data-x>${esc(cancelText)}</button>${onOk?`<button class="btn ${okClass}" data-ok>${esc(okText)}</button>`:''}</div></div>`;
+  const close = () => wrap.remove();
+  wrap.addEventListener('click', e => { if (e.target === wrap || e.target.closest('[data-x]')) close(); });
+  if (onOk) wrap.querySelector('[data-ok]').onclick = async () => {
+    try { const r = await onOk(wrap); if (r !== false) close(); } catch(e){ toast(e.message, true); }
+  };
+  ov.appendChild(wrap);
+  const f = wrap.querySelector('input,select,textarea'); f && f.focus();
+  return wrap;
+}
+function confirmBox(title, html, okText='ยืนยัน', danger=true){
+  return new Promise(res => {
+    const w = modal({title, icon: danger?'alert':'checkc', body:`<div style="line-height:1.7">${html}</div>`, okText, okClass: danger?'danger':'pri', onOk: () => { res(true); }});
+    w.addEventListener('click', e => { if (e.target === w || e.target.closest('[data-x]')) res(false); });
+  });
+}
+function winShell(path, actions, body){
+  return `<section class="win"><div class="winbar"><div class="dots"><i></i><i></i><i></i></div>
+    <div class="path">~/python/<b>${esc(path)}</b></div><div class="acts">${actions}</div></div>
+    <div class="winbody">${body}</div></section>`;
+}
+
+/* =====================================================================
+ *  Header / background decorations
+ * =================================================================== */
+function applyApp(app){
+  if (!app) return;
+  S.app = app;
+  $('#appTitle').innerHTML = esc(app.title);
+  $('#appSubject').textContent = app.subject;
+  $('#appLevel').textContent = app.level;
+  $('#appSchool').textContent = app.school;
+  $('#logo').innerHTML = app.logoUrl ? `<img src="${esc(app.logoUrl)}" alt="ตราโรงเรียน">` : LOGO_SVG;
+}
+function decorate(){
+  const snippets = ['def submit(task):','for week in range(1, 11):','if score >= 80:','print("Hello, World!")','while not done:','import random','name = input()','return True','elif x > 0:','# keep coding 🐍','len(tasks)','try:','except ValueError:','x = [i**2 for i in range(5)]'];
+  const bg = $('#bg');
+  for (let i=0;i<14;i++){
+    const s = document.createElement('div');
+    s.className = 'float';
+    s.textContent = snippets[i % snippets.length];
+    s.style.left = (Math.random()*95) + '%';
+    s.style.animationDuration = (28 + Math.random()*30) + 's';
+    s.style.animationDelay = (-Math.random()*50) + 's';
+    s.style.fontSize = (12 + Math.random()*6) + 'px';
+    bg.appendChild(s);
+  }
+  // typing terminal
+  const scripts = [
+    ['<span class="p">&gt;&gt;&gt;</span> <span class="k">import</span> python', '<span class="p">&gt;&gt;&gt;</span> <span class="k">for</span> task <span class="k">in</span> progress:', '<span class="p">...</span>     <span class="f">submit</span>(task) <span class="s"># ✔</span>'],
+    ['<span class="p">&gt;&gt;&gt;</span> score = <span class="f">sum</span>(my_scores)', '<span class="p">&gt;&gt;&gt;</span> <span class="f">print</span>(<span class="s">"Keep going! 🐍"</span>)', 'Keep going! 🐍'],
+    ['<span class="p">&gt;&gt;&gt;</span> <span class="k">while</span> <span class="k">not</span> done:', '<span class="p">...</span>     learn(); code(); debug()', '<span class="p">&gt;&gt;&gt;</span> <span class="s">"Success"</span>']
+  ];
+  const lines = [$('#t1'),$('#t2'),$('#t3')];
+  let si = 0;
+  const strip = h => h.replace(/<[^>]+>/g,'').replace(/&gt;/g,'>').replace(/&lt;/g,'<').replace(/&amp;/g,'&');
+  async function play(){
+    const sc = scripts[si++ % scripts.length];
+    lines.forEach(l => l.innerHTML = '');
+    for (let i=0;i<sc.length;i++){
+      const plain = strip(sc[i]);
+      for (let c=1;c<=plain.length;c++){ lines[i].innerHTML = esc(plain.slice(0,c)) + '<span class="caret"></span>'; await new Promise(r=>setTimeout(r, 38)); }
+      lines[i].innerHTML = sc[i];
+      await new Promise(r=>setTimeout(r, 300));
+    }
+    lines[sc.length-1].insertAdjacentHTML('beforeend','<span class="caret"></span>');
+    setTimeout(play, 3200);
+  }
+  if (!matchMedia('(prefers-reduced-motion: reduce)').matches) play();
+  else lines.forEach((l,i)=> l.innerHTML = scripts[0][i]);
+}
+
+/* =====================================================================
+ *  Login view
+ * =================================================================== */
+function renderLogin(mode='student', err=''){
+  const isAdmin = mode === 'admin';
+  $('#app').innerHTML = `
+  <div class="login-wrap">
+    <div class="hero">
+      <h2>เขียนโค้ด • ส่งงาน<br><span>ติดตามคะแนนของคุณ</span></h2>
+      <p>ตรวจสอบสถานะการส่งงานและคะแนนรายสัปดาห์ของรายวิชาการเขียนโปรแกรมคอมพิวเตอร์ (Python) ได้ทุกที่ ทุกเวลา</p>
+      <div class="code">
+        <div><span class="c"># my_progress.py</span></div>
+        <div><span class="k">for</span> week <span class="k">in</span> <span class="f">range</span>(<span class="n">1</span>, <span class="n">11</span>):</div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">if</span> <span class="k">not</span> submitted(week):</div>
+        <div>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="f">print</span>(<span class="s">f"ส่งงาน W{week} ด้วยนะ!"</span>)</div>
+        <div><span class="f">print</span>(<span class="s">"เก่งมาก 🐍"</span>)</div>
+      </div>
+      <div class="chips">
+        <span class="chip"><i style="background:var(--done)"></i>ตรวจแล้ว</span>
+        <span class="chip"><i style="background:var(--late)"></i>ส่งช้า</span>
+        <span class="chip"><i style="background:var(--redo)"></i>ส่งใหม่</span>
+        <span class="chip"><i style="background:var(--todo)"></i>ยังไม่ส่ง</span>
+      </div>
+      ${S.announce ? `<div class="announce-dark">📢 ${esc(S.announce)}</div>` : ''}
+    </div>
+    <div class="editor">
+      <div class="bar"><i></i><i></i><i></i>
+        <div class="tabs">
+          <button type="button" data-mode="student" class="${!isAdmin?'on':''}">${ic('user','width="14" height="14"')}student.py</button>
+          <button type="button" data-mode="admin" class="${isAdmin?'on':''}">${ic('shield','width="14" height="14"')}teacher.py</button>
+        </div>
+      </div>
+      <form id="loginForm" autocomplete="on">
+        <div class="eline"><span class="no">1</span><span style="color:#6f8aa6"># ${isAdmin ? '🔐 เข้าสู่ระบบสำหรับครู (Admin)' : '🐍 เข้าสู่ระบบนักเรียน'}</span></div>
+        <div class="eline"><span class="no">2</span><span style="color:#6f8aa6"><span style="color:#ff79c6">from</span> school <span style="color:#ff79c6">import</span> ${isAdmin?'admin_panel':'my_tasks'}</span></div>
+        <div class="eline"><span class="no">3</span><span></span></div>
+        ${isAdmin ? `
+        <div class="eline"><span class="no">4</span><div class="field"><span class="var">username</span><span class="eq">=</span>
+          <div class="inp"><input id="lu" name="username" placeholder="ชื่อผู้ใช้ครู" autocomplete="username" required></div></div></div>
+        <div class="eline"><span class="no">5</span><div class="field"><span class="var">password</span><span class="eq">=</span>
+          <div class="inp"><input id="lp" name="password" type="password" placeholder="รหัสผ่าน" autocomplete="current-password" required>
+          <button type="button" class="eye" id="eye" aria-label="แสดงรหัสผ่าน">${ic('eye')}</button></div></div></div>
+        <div class="eline"><span class="no">6</span><span></span></div>` : `
+        <div class="eline"><span class="no">4</span><div class="field"><span class="var">student_id</span><span class="eq">=</span>
+          <div class="inp"><input id="lu" name="student_id" placeholder="รหัสนักเรียน เช่น 05867" inputmode="numeric" pattern="[0-9 ]*" maxlength="10" autocomplete="off" required
+            style="font-family:var(--mono);font-size:19px;letter-spacing:3px"></div></div></div>
+        <div class="eline"><span class="no">5</span><span></span></div>`}
+        <button class="run" type="submit">${ic('play')} ${isAdmin?'admin.login()':'login(student_id)'}</button>
+        ${err ? `<div class="err">⚠ ${esc(err)}</div>` : ''}
+        <div class="hint">${isAdmin ? '# สำหรับครูผู้สอนเท่านั้น — จัดการสถานะ คะแนน นักเรียน และภาระงาน' : '# กรอกรหัสประจำตัวนักเรียน 5 หลัก แล้วกด Enter'}</div>
+      </form>
+    </div>
+  </div>`;
+  document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => renderLogin(b.dataset.mode));
+  if ($('#eye')) $('#eye').onclick = () => { const p = $('#lp'); const show = p.type === 'password'; p.type = show ? 'text':'password'; $('#eye').innerHTML = ic(show?'eyeoff':'eye'); };
+  $('#loginForm').onsubmit = async e => {
+    e.preventDefault();
+    const u = $('#lu').value.trim(), p = $('#lp') ? $('#lp').value.trim() : '';
+    try {
+      if (isAdmin) {
+        const r = await run(() => api('adminLogin', u, p), 'กำลังตรวจสอบสิทธิ์...');
+        S.token = r.token; S.role = 'admin'; store.set({token:r.token, role:'admin'});
+        await loadAdmin();
+      } else {
+        const r = await run(() => api('studentLogin', u), 'กำลังโหลดข้อมูลงาน...');
+        S.token = r.token; S.role = 'student'; store.set({token:r.token, role:'student'});
+        S.student = r.data; S.filter = 'all';
+        renderStudent();
+      }
+    } catch(err){ renderLogin(mode, err.message); $('#lu').value = u; }
+  };
+  setTimeout(() => $('#lu') && $('#lu').focus(), 50);
+}
+
+async function doLogout(silent){
+  const t = S.token;
+  S.token = null; S.role = null; S.student = null; S.admin = null; S.dirty.clear();
+  store.set(null);
+  if (t && !silent) api('logout', t).catch(()=>{});
+  renderLogin();
+}
+
+/* =====================================================================
+ *  Student view
+ * =================================================================== */
+function studentSummary(items){
+  const st = items.filter(x => x.hasStatus);
+  const c = {done:0,sent:0,late:0,redo:0,todo:0};
+  st.forEach(x => c[kindOf(x.status)]++);
+  const submitted = c.done + c.sent + c.late;
+  const sc = items.filter(x => x.hasScore);
+  let got = 0, totalMax = 0, gradedMax = 0;
+  sc.forEach(x => { const n = num(x.score); if (x.max) totalMax += x.max; if (n != null){ got += n; if (x.max) gradedMax += x.max; } });
+  return {c, total: st.length, submitted, got, totalMax, gradedMax};
+}
+function ring(pct, color){
+  const r = 40, C = 2*Math.PI*r;
+  return `<div class="ring"><svg viewBox="0 0 100 100"><circle class="tr" cx="50" cy="50" r="${r}"/><circle class="pg" cx="50" cy="50" r="${r}" stroke="${color}" stroke-dasharray="${C}" stroke-dashoffset="${C}" data-off="${C*(1-pct/100)}"/></svg><div class="v">${Math.round(pct)}%</div></div>`;
+}
+function taskCard(x, i){
+  const t = splitTitle(x.title);
+  const k = x.hasStatus ? kindOf(x.status) : 'exam';
+  const K = KIND[k];
+  const label = x.hasStatus ? (x.status || 'ยังไม่ส่ง') : 'คะแนนสอบ';
+  const n = num(x.score);
+  let scoreHtml = '';
+  if (x.hasScore) {
+    if (n != null) {
+      const pct = x.max ? Math.min(100, n/x.max*100) : 100;
+      scoreHtml = `<div class="score"><div class="l"><span>คะแนนที่ได้</span><b>${fmt(n)}${x.max?` <small>/ ${fmt(x.max)}</small>`:''}</b></div>${x.max?`<div class="bar"><i style="width:0" data-w="${pct}%"></i></div>`:''}</div>`;
+    } else {
+      scoreHtml = `<div class="score"><div class="l"><span>คะแนนที่ได้</span><b>– ${x.max?`<small>/ ${fmt(x.max)}</small>`:''}</b></div><div class="na">ยังไม่มีการบันทึกคะแนน</div></div>`;
+    }
+  }
+  const canSubmit = x.link && x.hasStatus && (k === 'todo' || k === 'redo');
+  const foot = canSubmit
+    ? `<a class="btn yel sm" href="${esc(x.link)}" target="_blank" rel="noopener">${ic('send')} ไปส่งงาน</a>`
+    : `<span class="pill k-${k}">${ic(K.icon)} ${esc(x.hasStatus ? label : (n!=null?'มีคะแนนแล้ว':'รอคะแนน'))}</span>`;
+  return `<article class="task ${k}" style="animation-delay:${Math.min(i*45,600)}ms">
+    <div class="hd">${t.tag?`<span class="tag">${esc(t.tag)}</span>`:''}<span class="tt" title="${esc(x.title)}">${esc(t.name)}</span>${ic(K.icon)}</div>
+    <div class="bd">
+      <div class="row"><div class="st-ico">${ic(K.icon)}</div><div class="stx"><b>${esc(label)}</b><small>${esc(x.hasStatus ? K.desc : (x.max?`คะแนนเต็ม ${fmt(x.max)}`:'คะแนนสอบ'))}</small></div></div>
+      ${scoreHtml}
+      <div class="ft">${foot}</div>
+    </div></article>`;
+}
+function renderStudent(){
+  const d = S.student, p = d.profile, sm = studentSummary(d.items);
+  const pctSub = sm.total ? sm.submitted/sm.total*100 : 0;
+  const pctScore = sm.totalMax ? sm.got/sm.totalMax*100 : 0;
+  const first = (p.name||'').replace(/^(เด็กชาย|เด็กหญิง|นาย|นางสาว|นาง|ด\.ช\.|ด\.ญ\.)\s*/,'').split(' ')[0];
+  const f = S.filter;
+  const filtered = d.items.filter(x => {
+    if (f === 'all') return true;
+    if (!x.hasStatus) return f === 'exam';
+    const k = kindOf(x.status);
+    if (f === 'todo') return k === 'todo' || k === 'redo';
+    if (f === 'done') return isSubmitted(k);
+    return false;
+  });
+  const nExam = d.items.filter(x => !x.hasStatus).length;
+  const missing = sm.c.todo + sm.c.redo;
+  const body = `
+    <div class="sec-title"><div class="ico">${ic('list')}</div><h2>ภาระงานของคุณ</h2></div>
+    <div class="hello"><span class="f">print</span>(<span class="s">"สวัสดี ${esc(first)} 👋 ${missing ? `เหลืองานที่ต้องส่งอีก ${missing} ชิ้น` : 'ส่งงานครบแล้ว เยี่ยมมาก!'}"</span>)</div>
+    <div class="profile">
+      <div class="pcard"><small>เลขที่</small><b>${esc(p.number||'-')}</b></div>
+      <div class="pcard"><small>รหัส</small><b class="mono">${esc(p.stdId||'-')}</b></div>
+      <div class="pcard"><small>ชื่อ</small><b>${esc(p.name)}</b></div>
+      <div class="pcard"><small>ห้อง</small><b>${esc(p.cls||'-')}</b></div>
+    </div>
+    ${d.announce ? `<div class="announce">${ic('mega')}<div>${esc(d.announce)}</div></div>` : ''}
+    <div class="stats">
+      <div class="stat">${ring(pctSub, 'var(--done)')}<div><h4>ส่งงานแล้ว</h4><div class="big">${sm.submitted}<small> / ${sm.total} งาน</small></div><small style="color:var(--ink-3)">${missing?`ค้างส่ง/แก้ไข ${missing} งาน`:'ครบทุกงาน 🎉'}</small></div></div>
+      <div class="stat" style="display:block"><h4>คะแนนสะสม</h4><div class="big">${fmt(sm.got)}<small> / ${fmt(sm.totalMax)} คะแนน</small></div>
+        <div class="bar"><i style="width:0" data-w="${pctScore}%"></i></div>
+        <small style="color:var(--ink-3)">${sm.gradedMax ? `ได้ ${Math.round(sm.got/sm.gradedMax*100)}% ของงานที่ประเมินแล้ว (${fmt(sm.gradedMax)} คะแนน)` : 'ยังไม่มีงานที่ประเมินคะแนน'}</small></div>
+      <div class="stat"><div class="counts">
+        <div class="cnt k-done">${ic('check')}ตรวจแล้ว<b>${sm.c.done}</b></div>
+        <div class="cnt k-late">${ic('clock')}ส่งช้า<b>${sm.c.late}</b></div>
+        <div class="cnt k-redo">${ic('refresh')}ส่งใหม่<b>${sm.c.redo}</b></div>
+        <div class="cnt k-todo">${ic('hourglass')}ยังไม่ส่ง<b>${sm.c.todo}</b></div>
+        ${sm.c.sent?`<div class="cnt k-sent">${ic('inbox')}รอตรวจ<b>${sm.c.sent}</b></div>`:''}
+      </div></div>
+    </div>
+    <div class="filters">
+      <button data-f="all" class="${f==='all'?'on':''}">ทั้งหมด<span>${d.items.length}</span></button>
+      <button data-f="todo" class="${f==='todo'?'on':''}">ต้องส่ง / แก้ไข<span>${missing}</span></button>
+      <button data-f="done" class="${f==='done'?'on':''}">ส่งแล้ว<span>${sm.submitted}</span></button>
+      ${nExam?`<button data-f="exam" class="${f==='exam'?'on':''}">การสอบ<span>${nExam}</span></button>`:''}
+    </div>
+    <div class="grid">${filtered.length ? filtered.map(taskCard).join('') : `<div class="empty"># ไม่มีรายการในหมวดนี้ ✨</div>`}</div>
+    ${!d.found.status ? `<div class="announce" style="margin-top:18px">${ic('alert')}<div>ไม่พบชื่อของคุณในชีตสถานะการส่งงาน กรุณาแจ้งครูผู้สอน</div></div>`:''}
+    <div class="foot-note"># อัพเดทล่าสุด ${new Date(d.updatedAt).toLocaleString('th-TH')}</div>`;
+  $('#app').innerHTML = winShell('student_dashboard.py',
+    `<button class="btn sm" id="bRefresh">${ic('refresh')}<span class="lbl">อัพเดท</span></button><button class="btn sm" id="bOut">${ic('logout')}<span class="lbl">ออก</span></button>`, body);
+  $('#bRefresh').onclick = async () => {
+    try { const r = await run(() => api('getStudentData', S.token), 'กำลังดึงข้อมูลล่าสุด...'); if (r){ S.student = r; renderStudent(); toast('อัพเดทข้อมูลแล้ว'); } }
+    catch(e){ toast(e.message, true); }
+  };
+  $('#bOut').onclick = () => doLogout();
+  document.querySelectorAll('.filters button').forEach(b => b.onclick = () => { S.filter = b.dataset.f; renderStudent(); });
+  animateBars();
+}
+function animateBars(){
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    document.querySelectorAll('[data-w]').forEach(el => el.style.width = el.dataset.w);
+    document.querySelectorAll('[data-off]').forEach(el => el.style.strokeDashoffset = el.dataset.off);
+  }));
+}
+
+/* =====================================================================
+ *  Admin view
+ * =================================================================== */
+async function loadAdmin(keepTab){
+  const r = await run(() => api('adminGetData', S.token), 'กำลังโหลดข้อมูลทั้งหมด...');
+  if (!r) return;
+  S.admin = r; S.announce = r.announce;
+  if (!keepTab) S.tab = 'overview';
+  if (S.cls !== 'all' && !r.classes.includes(S.cls)) S.cls = 'all';
+  renderAdmin();
+}
+const TABS = [
+  ['overview','ภาพรวม','chart'], ['status','สถานะการส่ง','checkc'], ['score','คะแนน','star'],
+  ['students','นักเรียน','users'], ['items','ภาระงาน','book'], ['settings','ตั้งค่า','gear']
+];
+function filteredStudents(){
+  const q = S.q.trim().toLowerCase();
+  return S.admin.students.filter(s => (S.cls==='all' || s.cls===S.cls) &&
+    (!q || [s.name, s.stdId, s.username, s.number].some(v => String(v||'').toLowerCase().includes(q))))
+    .sort((a,b) => a.cls.localeCompare(b.cls) || (num(a.number)||0) - (num(b.number)||0));
+}
+const sid = s => s.stdId || s.name;
+const dkey = (type, s, key) => `${type}|${sid(s)}|${key}`;
+function curVal(type, s, key){
+  const d = S.dirty.get(dkey(type, s, key));
+  return d ? d.value : (type==='status' ? s.status[key] : s.score[key]) || '';
+}
+function setVal(type, s, key, value){
+  const k = dkey(type, s, key);
+  const orig = (type==='status' ? s.status[key] : s.score[key]) || '';
+  if (String(value) === String(orig)) S.dirty.delete(k);
+  else S.dirty.set(k, {type, stdId:s.stdId, name:s.name, key, value});
+}
+function renderAdmin(){
+  const A = S.admin;
+  const tabs = `<nav class="atabs">${TABS.map(([k,l,i]) => `<button data-tab="${k}" class="${S.tab===k?'on':''}">${ic(i)}${l}</button>`).join('')}</nav>`;
+  const showFilters = ['overview','status','score','students'].includes(S.tab);
+  const filters = showFilters ? `<div class="toolbar">
+      <select class="sel" id="fCls"><option value="all">ทุกห้อง (${A.students.length} คน)</option>${A.classes.map(c => `<option value="${esc(c)}" ${S.cls===c?'selected':''}>ห้อง ${esc(c)} (${A.students.filter(s=>s.cls===c).length} คน)</option>`).join('')}</select>
+      ${S.tab!=='overview' ? `<div class="search"><input class="txt" id="fQ" placeholder="ค้นหาชื่อ / รหัส / username" value="${esc(S.q)}">${ic('search')}</div>` : ''}
+      <div class="grow"></div><span class="mono" style="font-size:12.5px;color:var(--ink-3)">sync: ${new Date(A.updatedAt).toLocaleTimeString('th-TH')}</span></div>` : '';
+  const body = `<div class="sec-title"><div class="ico">${ic('shield')}</div><h2>แผงควบคุมครู</h2>
+      <div class="side"><span class="chip" style="background:#fff;color:var(--ink-2);border-color:var(--line)">${ic('user','width="15" height="15"')} ${esc(A.adminUser)}</span></div></div>
+    <div class="sheet-links">
+      <span class="mono"># เปิด Google Sheets</span>
+      ${[['login','Login นักเรียน','users'],['status','สถานะการส่ง','checkc'],['score','คะแนน','star']].map(([k,l,i]) =>
+        `<a class="gs-btn" href="${esc(A.sheets[k])}" target="_blank" rel="noopener"><span class="gs-ic">${ic('file')}</span><span><b>${l}</b><small>Google Sheets</small></span>${ic('ext','class="gs-ext"')}</a>`).join('')}
+    </div>
+    ${A.readOnly ? `<div class="announce" style="background:#eaf6ff;border-color:#7cc4f0;color:#0b4a6f">${ic('file')}<div><b>โหมดอ่านอย่างเดียว (LIVE)</b> — ข้อมูลดึงจาก Google Sheets โดยตรง กด "อัพเดท" เพื่อดึงข้อมูลล่าสุด
+หากต้องการแก้สถานะ/คะแนน ให้แก้ในชีต (แท็บตั้งค่า มีลิงก์) หรือติดตั้งบน Google Apps Script เพื่อแก้จากหน้านี้ได้</div></div>` : ''}
+    ${tabs}${filters}<div id="tabBody"></div>`;
+  document.body.classList.toggle('ro', !!A.readOnly);
+  $('#app').innerHTML = winShell('admin_panel.py',
+    `<button class="btn sm" id="bRefresh">${ic('refresh')}<span class="lbl">อัพเดท</span></button><button class="btn sm" id="bOut">${ic('logout')}<span class="lbl">ออก</span></button>`, body);
+  document.querySelectorAll('.atabs button').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; renderAdmin(); });
+  const fc = $('#fCls'); if (fc) fc.onchange = () => { S.cls = fc.value; renderTab(); };
+  const fq = $('#fQ'); if (fq) fq.oninput = () => { S.q = fq.value; renderTab(); };
+  $('#bRefresh').onclick = async () => {
+    if (S.dirty.size && !(await confirmBox('ยกเลิกการแก้ไข?', `มีการแก้ไขที่ยังไม่บันทึก <b>${S.dirty.size}</b> รายการ ต้องการโหลดข้อมูลใหม่และทิ้งการแก้ไขหรือไม่`, 'โหลดใหม่'))) return;
+    S.dirty.clear();
+    try { await loadAdmin(true); toast('โหลดข้อมูลล่าสุดแล้ว'); } catch(e){ toast(e.message, true); }
+  };
+  $('#bOut').onclick = async () => {
+    if (S.dirty.size && !(await confirmBox('ออกจากระบบ?', `มีการแก้ไขที่ยังไม่บันทึก <b>${S.dirty.size}</b> รายการ`, 'ออกโดยไม่บันทึก'))) return;
+    doLogout();
+  };
+  renderTab();
+}
+function renderTab(){
+  const el = $('#tabBody');
+  const fn = {overview:tabOverview, status:tabStatus, score:tabScore, students:tabStudents, items:tabItems, settings:tabSettings}[S.tab];
+  el.innerHTML = fn();
+  bindTab();
+  animateBars();
+}
+function saveBar(){
+  if (!S.dirty.size) return '';
+  return `<div class="savebar"><div class="grow"># มีการแก้ไขที่ยังไม่บันทึก <b>${S.dirty.size}</b> รายการ</div>
+    <button class="btn sm ghost" id="bDiscard" style="background:transparent;color:#fff;border-color:rgba(255,255,255,.3)">ยกเลิก</button>
+    <button class="btn sm yel" id="bSave">${ic('save')} บันทึกลง Google Sheets</button></div>`;
+}
+
+/* ---- Overview ---- */
+function tabOverview(){
+  const A = S.admin, list = filteredStudents();
+  const sItems = A.items.filter(x => x.inStatus);
+  let cells = 0, sub = 0;
+  const per = sItems.map(x => {
+    const c = {done:0,sent:0,late:0,redo:0,todo:0};
+    list.filter(s=>s.inStatus).forEach(s => c[kindOf(s.status[x.key])]++);
+    const tot = Object.values(c).reduce((a,b)=>a+b,0);
+    cells += tot; sub += c.done + c.sent + c.late;
+    return {x, c, tot};
+  });
+  const follow = list.map(s => {
+    const miss = sItems.filter(x => { const k = kindOf(s.status[x.key]); return k==='todo' || k==='redo'; });
+    return {s, miss};
+  }).filter(f => f.miss.length).sort((a,b) => b.miss.length - a.miss.length);
+  // ignore weeks no one has submitted yet (likely future weeks) for the follow-up list
+  const active = per.filter(p => p.c.done + p.c.sent + p.c.late + p.c.redo > 0).map(p => p.x.key);
+  const followActive = list.map(s => ({s, miss: sItems.filter(x => active.includes(x.key) && ['todo','redo'].includes(kindOf(s.status[x.key])))}))
+    .filter(f => f.miss.length).sort((a,b)=> b.miss.length - a.miss.length);
+  const classes = (S.cls==='all' ? A.classes : [S.cls]).map(c => {
+    const ss = A.students.filter(s => s.cls===c);
+    let t=0, d=0, got=0, mx=0;
+    ss.forEach(s => {
+      sItems.filter(x=>active.includes(x.key)).forEach(x => { t++; if (isSubmitted(kindOf(s.status[x.key]))) d++; });
+      A.items.filter(x=>x.inScore && x.max).forEach(x => { const n = num(s.score[x.key]); if (n!=null){ got+=n; mx+=x.max; } });
+    });
+    return {c, n:ss.length, pct: t? d/t*100 : 0, avg: mx? got/mx*100 : null};
+  });
+  const seg = (c,tot) => ['done','sent','late','redo','todo'].map(k => c[k] ? `<i style="width:${c[k]/tot*100}%;background:${KIND[k].color}" title="${KIND[k].label} ${c[k]}"></i>` : '').join('');
+  return `
+  <div class="kpis">
+    <div class="kpi"><small>นักเรียน</small><b>${list.length}</b><div class="ic k-exam">${ic('users')}</div></div>
+    <div class="kpi"><small>ภาระงาน (มีการส่งแล้ว)</small><b>${sItems.length} <small style="font-size:15px;color:var(--ink-3)">(${active.length})</small></b><div class="ic k-sent">${ic('book')}</div></div>
+    <div class="kpi"><small>อัตราการส่ง (งานที่เปิดแล้ว)</small><b>${(() => { let t=0,d=0; list.forEach(s=>sItems.filter(x=>active.includes(x.key)).forEach(x=>{t++; if(isSubmitted(kindOf(s.status[x.key]))) d++;})); return t? Math.round(d/t*100):0; })()}%</b><div class="ic k-done">${ic('checkc')}</div></div>
+    <div class="kpi"><small>ต้องติดตาม (ค้าง ≥ 1 งาน)</small><b>${followActive.length}</b><div class="ic k-todo">${ic('alert')}</div></div>
+  </div>
+  <div class="two">
+    <div class="panel"><h3>${ic('chart','width="20" height="20"')} สถานะรายภาระงาน <span class="mono">${S.cls==='all'?'ทุกห้อง':'ห้อง '+esc(S.cls)}</span></h3>
+      <div class="legend">${['done','sent','late','redo','todo'].map(k=>`<span><i style="background:${KIND[k].color}"></i>${KIND[k].label}</span>`).join('')}</div>
+      ${per.map(p => { const t = splitTitle(p.x.title); const s = p.c.done+p.c.sent+p.c.late; return `<div class="srow"><div class="nm" title="${esc(p.x.title)}"><b>${esc(t.tag||'')}</b> ${esc(t.name)}</div><div class="stack">${p.tot?seg(p.c,p.tot):''}</div><div class="mono" style="font-size:13px;text-align:right">${s}/${p.tot}</div></div>`; }).join('')}
+    </div>
+    <div>
+      <div class="panel"><h3>${ic('users','width="20" height="20"')} รายห้อง</h3><div class="cls-cards">
+        ${classes.map(c => `<div class="clsc"><div style="display:flex;justify-content:space-between;align-items:baseline"><b>ห้อง ${esc(c.c)}</b><small>${c.n} คน</small></div>
+          <div style="font-size:13px;color:var(--ink-2);margin-top:6px">ส่งงาน ${Math.round(c.pct)}%</div><div class="bar"><i style="width:0;background:linear-gradient(90deg,var(--done),#4cc485)" data-w="${c.pct}%"></i></div>
+          <div style="font-size:13px;color:var(--ink-2);margin-top:6px">คะแนนเฉลี่ย ${c.avg==null?'–':Math.round(c.avg)+'%'}</div><div class="bar"><i style="width:0" data-w="${c.avg||0}%"></i></div></div>`).join('')}
+      </div></div>
+      <div class="panel"><h3>${ic('alert','width="20" height="20"')} นักเรียนที่ต้องติดตาม <span class="mono">งานที่เปิดแล้ว</span></h3>
+        <div class="follow">${followActive.length ? followActive.slice(0,60).map(f => `<div class="fl"><span class="badge">${f.miss.length}</span><div class="n">${esc(f.s.name)}<small>ห้อง ${esc(f.s.cls)} • เลขที่ ${esc(f.s.number)}</small></div>
+          <div class="miss">${f.miss.map(x => `<span class="mtag ${kindOf(f.s.status[x.key])==='redo'?'r':''}">${esc(splitTitle(x.title).tag || x.key)}</span>`).join('')}</div></div>`).join('') : '<div class="empty" style="padding:20px"># ทุกคนส่งงานครบ 🎉</div>'}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ---- Status grid ---- */
+function tabStatus(){
+  const A = S.admin, list = filteredStudents().filter(s => s.inStatus);
+  const items = A.items.filter(x => x.inStatus);
+  const opts = (v) => { const all = ['', ...A.statusOptions]; if (v && !all.includes(v)) all.push(v); return all.map(o => `<option value="${esc(o)}" ${o===v?'selected':''}>${o||'ยังไม่ส่ง'}</option>`).join(''); };
+  return `
+  <div class="toolbar panel" style="margin-bottom:14px;padding:12px 14px">
+    <span style="display:flex;align-items:center;gap:6px;font-weight:600">${ic('wand','width="18" height="18"')} เติมทั้งคอลัมน์</span>
+    <select class="sel" id="bfItem">${items.map(x=>`<option value="${esc(x.key)}">${esc(x.title)}</option>`).join('')}</select>
+    <select class="sel" id="bfVal">${['', ...A.statusOptions].map(o=>`<option value="${esc(o)}">${o||'ยังไม่ส่ง (ล้างค่า)'}</option>`).join('')}</select>
+    <label class="chk" style="display:flex;align-items:center;gap:6px;font-size:14px"><input type="checkbox" id="bfEmpty" checked> เฉพาะช่องที่ยังว่าง</label>
+    <button class="btn sm" id="bfGo">ใช้กับ ${list.length} คนที่แสดง</button>
+  </div>
+  <div class="tbl-wrap"><table class="gt"><thead><tr><th class="stk c0">เลขที่</th><th class="stk c1">ชื่อ-สกุล</th><th>ห้อง</th>
+    ${items.map(x => { const t = splitTitle(x.title); return `<th title="${esc(x.title)}"><div class="tg">${esc(t.tag||x.key)}</div><small>${esc(t.name)}</small></th>`; }).join('')}<th>ส่งแล้ว</th></tr></thead>
+    <tbody>${list.map(s => {
+      let n = 0;
+      const cells = items.map(x => { const v = curVal('status', s, x.key); const k = kindOf(v); if (isSubmitted(k)) n++;
+        const dirty = S.dirty.has(dkey('status', s, x.key));
+        return `<td><select class="ss ${k} ${dirty?'dirty':''}" data-t="status" data-s="${esc(sid(s))}" data-k="${esc(x.key)}">${opts(v)}</select></td>`; }).join('');
+      return `<tr><td class="stk c0">${esc(s.number)}</td><td class="stk c1 l">${esc(s.name)}</td><td>${esc(s.cls)}</td>${cells}<td class="mono"><b>${n}</b>/${items.length}</td></tr>`;
+    }).join('') || `<tr><td colspan="${items.length+4}" class="empty">ไม่พบนักเรียน</td></tr>`}</tbody></table></div>
+  ${saveBar()}`;
+}
+
+/* ---- Score grid ---- */
+function tabScore(){
+  const A = S.admin, list = filteredStudents().filter(s => s.inScore);
+  const items = A.items.filter(x => x.inScore);
+  const totalMax = items.reduce((a,x)=>a+(x.max||0),0);
+  return `
+  <div class="tbl-wrap"><table class="gt"><thead><tr><th class="stk c0">เลขที่</th><th class="stk c1">ชื่อ-สกุล</th><th>ห้อง</th>
+    ${items.map(x => { const t = splitTitle(x.title); return `<th title="${esc(x.title)}"><div class="tg">${esc(t.tag||x.key)}</div><small>${esc(t.name)}</small><small style="color:var(--py-blue)">เต็ม ${x.max==null?'–':fmt(x.max)}</small></th>`; }).join('')}
+    <th>รวม<small>เต็ม ${fmt(totalMax)}</small></th></tr></thead>
+    <tbody>${list.map(s => {
+      let sum = 0;
+      const cells = items.map(x => { const v = curVal('score', s, x.key); const n = num(v); if (n!=null) sum += n;
+        const over = n!=null && x.max!=null && n > x.max; const dirty = S.dirty.has(dkey('score', s, x.key));
+        const k = kindOf(s.status[x.key]);
+        return `<td><input class="si ${over?'over':''} ${dirty?'dirty':''}" inputmode="decimal" value="${esc(v)}" data-t="score" data-s="${esc(sid(s))}" data-k="${esc(x.key)}" data-max="${x.max==null?'':x.max}" title="${x.inStatus?'สถานะ: '+esc(s.status[x.key]||'ยังไม่ส่ง'):''}" style="${x.inStatus && k==='todo' && v===''?'background:#fafbfc':''}"></td>`; }).join('');
+      return `<tr><td class="stk c0">${esc(s.number)}</td><td class="stk c1 l">${esc(s.name)}</td><td>${esc(s.cls)}</td>${cells}<td class="mono"><b>${fmt(sum)}</b></td></tr>`;
+    }).join('') || `<tr><td colspan="${items.length+4}" class="empty">ไม่พบนักเรียน</td></tr>`}</tbody></table></div>
+  <p style="font-size:13px;color:var(--ink-3);margin:10px 2px 0"># ช่องสีแดง = เกินคะแนนเต็ม • กด Tab / Enter เพื่อเลื่อนช่อง • ปล่อยว่างเพื่อลบคะแนน</p>
+  ${saveBar()}`;
+}
+
+/* ---- Students ---- */
+function tabStudents(){
+  const list = filteredStudents();
+  return `
+  <div class="toolbar"><div class="grow" style="color:var(--ink-2);font-size:14px">แสดง ${list.length} คน — ข้อมูลเข้าสู่ระบบอยู่ในชีต Login, ชื่อ/รหัสจะอัพเดทในชีตสถานะและคะแนนด้วย</div>
+    <button class="btn sm ghost" id="bPw">${ic(S.showPw?'eyeoff':'eye')} ${S.showPw?'ซ่อน':'แสดง'}รหัสผ่าน</button>
+    <button class="btn sm pri" id="bAddStu">${ic('plus')} เพิ่มนักเรียน</button></div>
+  <div class="tbl-wrap"><table class="gt"><thead><tr><th class="stk c0">เลขที่</th><th class="stk c1">ชื่อ-สกุล</th><th>รหัส</th><th>ห้อง</th><th>Username</th><th>Password</th><th>ข้อมูลในชีต</th><th></th></tr></thead>
+  <tbody>${list.map((s,i) => {
+    const miss = [!s.inLogin&&'Login', !s.inStatus&&'สถานะ', !s.inScore&&'คะแนน'].filter(Boolean);
+    return `<tr><td class="stk c0">${esc(s.number)}</td><td class="stk c1 l">${esc(s.name)}</td><td class="mono">${esc(s.stdId||'-')}</td><td>${esc(s.cls)}</td>
+      <td>${esc(s.username||'-')}</td><td class="mono">${s.password ? (S.showPw ? esc(s.password) : '•••••') : '-'}</td>
+      <td>${miss.length ? `<span class="warn">${ic('alert','width="13" height="13" style="vertical-align:-2px"')} ไม่มีใน ${miss.join(', ')}</span>` : `<span style="color:var(--done);font-size:13px">✔ ครบ 3 ชีต</span>`}</td>
+      <td style="text-align:right"><button class="btn sm ghost" data-edit="${esc(sid(s))}">${ic('edit')}</button> <button class="btn sm danger" data-del="${esc(sid(s))}">${ic('trash')}</button></td></tr>`;
+  }).join('') || '<tr><td colspan="8" class="empty">ไม่พบนักเรียน</td></tr>'}</tbody></table></div>`;
+}
+function studentForm(s){
+  s = s || {number:'', stdId:'', name:'', cls: S.cls!=='all'?S.cls:(S.admin.classes[0]||''), username:'', password:''};
+  return `<div class="form-grid">
+    <label>เลขที่<input class="txt" name="number" value="${esc(s.number)}" inputmode="numeric"></label>
+    <label>รหัสนักเรียน (STD_ID)<input class="txt mono" name="stdId" value="${esc(s.stdId)}" inputmode="numeric"></label>
+    <label class="full">ชื่อ-สกุล (รวมคำนำหน้า)<input class="txt" name="name" value="${esc(s.name)}" placeholder="เด็กชาย... / เด็กหญิง..."></label>
+    <label>ห้อง<input class="txt" name="cls" value="${esc(s.cls)}" list="clsList" placeholder="2/1"><datalist id="clsList">${S.admin.classes.map(c=>`<option value="${esc(c)}">`).join('')}</datalist></label>
+    <label>Username (ใช้เข้าสู่ระบบ)<input class="txt" name="username" value="${esc(s.username)}"></label>
+    <label class="full">รหัสที่ใช้เข้าสู่ระบบ (คอลัมน์ Password)<input class="txt mono" name="password" value="${esc(s.password)}" placeholder="เว้นว่าง = ใช้รหัสนักเรียน"></label>
+  </div>`;
+}
+function openStudentModal(s){
+  modal({ title: s ? 'แก้ไขข้อมูลนักเรียน' : 'เพิ่มนักเรียนใหม่', icon: s?'edit':'plus', body: studentForm(s), onOk: async w => {
+    const v = {}; w.querySelectorAll('[name]').forEach(i => v[i.name] = i.value.trim());
+    if (!v.username && v.name) v.username = v.name.replace(/^(เด็กชาย|เด็กหญิง|นาย|นางสาว|นาง)\s*/,'').split(' ')[0];
+    if (!v.password) v.password = v.stdId;
+    if (!v.name || !v.cls || !v.password) { toast('กรุณากรอก ชื่อ-สกุล, ห้อง และรหัสนักเรียน/Password', true); return false; }
+    const r = await run(() => api('adminSaveStudent', S.token, v, s ? {name:s.name, stdId:s.stdId} : null), 'กำลังบันทึกนักเรียน...');
+    if (r === null) return;
+    toast(s ? 'แก้ไขข้อมูลแล้ว' : 'เพิ่มนักเรียนแล้ว');
+    await loadAdmin(true);
+  }});
+}
+
+/* ---- Assignments ---- */
+function tabItems(){
+  const A = S.admin;
+  return `
+  <div class="panel"><h3>${ic('plus','width="20" height="20"')} เพิ่มภาระงานใหม่ <span class="mono">เพิ่มคอลัมน์ท้ายชีต</span></h3>
+    <div class="form-grid" id="newItem">
+      <label>ชื่อภาระงาน (รูปแบบ "รหัส : ชื่อ")<input class="txt" name="title" placeholder="W11 : List & Dictionary"></label>
+      <label>คะแนนเต็ม<input class="txt" name="max" inputmode="decimal" placeholder="เช่น 5 (เว้นว่างได้)"></label>
+      <label class="full">ลิงก์สำหรับส่งงาน (ไม่บังคับ)<input class="txt" name="link" placeholder="https://classroom.google.com/..."></label>
+      <label class="chk"><input type="checkbox" name="toStatus" checked> เพิ่มในชีตสถานะการส่ง</label>
+      <label class="chk"><input type="checkbox" name="toScore" checked> เพิ่มในชีตคะแนน</label>
+    </div>
+    <div style="margin-top:12px;text-align:right"><button class="btn pri sm" id="bAddItem">${ic('plus')} เพิ่มภาระงาน</button></div>
+  </div>
+  <div class="alist">${A.items.map(x => `
+    <div class="aitem" data-key="${esc(x.key)}">
+      <div><div class="k">${esc(x.key)}</div><div class="flags"><span class="flag ${x.inStatus?'on':''}">สถานะ</span><span class="flag ${x.inScore?'on':''}">คะแนน</span></div></div>
+      <input class="txt" name="title" value="${esc(x.title)}" aria-label="ชื่อภาระงาน">
+      <input class="txt" name="max" value="${x.max==null?'':esc(x.max)}" placeholder="เต็ม" aria-label="คะแนนเต็ม" ${x.inScore?'':'disabled title="ไม่มีในชีตคะแนน"'}>
+      <input class="txt lk" name="link" value="${esc(x.link)}" placeholder="ลิงก์ส่งงาน https://..." aria-label="ลิงก์ส่งงาน">
+      <div class="ac" style="display:flex;gap:6px"><button class="btn sm" data-upd="${esc(x.key)}">${ic('save')}</button><button class="btn sm danger" data-rm="${esc(x.key)}">${ic('trash')}</button></div>
+    </div>`).join('')}</div>
+  <p style="font-size:13px;color:var(--ink-3)"># รหัสงาน (ข้อความก่อน ":") ใช้จับคู่คอลัมน์ระหว่างชีตสถานะและชีตคะแนน • ลิงก์ส่งงานจะแสดงเป็นปุ่ม "ไปส่งงาน" ให้นักเรียนที่ยังไม่ส่ง</p>`;
+}
+
+/* ---- Settings ---- */
+function tabSettings(){
+  const A = S.admin;
+  return `<div class="two">
+    <div>
+      <div class="panel"><h3>${ic('mega','width="20" height="20"')} ประกาศถึงนักเรียน</h3>
+        <textarea class="txt" id="annText" placeholder="เช่น ส่งงาน W6 ภายในวันศุกร์ที่ 4 ธ.ค. ก่อน 16.00 น.">${esc(A.announce)}</textarea>
+        <div style="margin-top:10px;display:flex;gap:8px;justify-content:flex-end"><button class="btn sm ghost" id="bAnnClear">ล้างประกาศ</button><button class="btn sm pri" id="bAnn">${ic('save')} บันทึกประกาศ</button></div></div>
+      <div class="panel"><h3>${ic('file','width="20" height="20"')} Google Sheets ต้นทาง</h3>
+        ${[['login','ชีตข้อมูลเข้าสู่ระบบ (Login)'],['status','ชีตสถานะการส่งงาน'],['score','ชีตคะแนน']].map(([k,l]) => `<div class="fl"><div class="n">${l}</div><a class="btn sm ghost" href="${esc(A.sheets[k])}" target="_blank" rel="noopener">${ic('ext')} เปิด</a></div>`).join('')}
+      </div>
+    </div>
+    <div class="panel"><h3>${ic('shield','width="20" height="20"')} เปลี่ยนบัญชีผู้ดูแล</h3>
+      <div class="form-grid" id="credForm">
+        <label class="full">รหัสผ่านปัจจุบัน<input class="txt" type="password" name="cur" autocomplete="current-password"></label>
+        <label class="full">Username ใหม่<input class="txt" name="user" value="${esc(A.adminUser)}" autocomplete="username"></label>
+        <label>รหัสผ่านใหม่<input class="txt" type="password" name="p1" autocomplete="new-password"></label>
+        <label>ยืนยันรหัสผ่านใหม่<input class="txt" type="password" name="p2" autocomplete="new-password"></label>
+      </div>
+      <div style="margin-top:12px;text-align:right"><button class="btn sm pri" id="bCred">${ic('save')} บันทึกบัญชีใหม่</button></div>
+      <p style="font-size:13px;color:var(--ink-3)"># บัญชีใหม่จะเก็บใน Script Properties ของโปรเจกต์ (แทนค่าเริ่มต้นในโค้ด)</p>
+    </div></div>`;
+}
+
+/* ---- bind events for the current tab ---- */
+function bindTab(){
+  const A = S.admin, byId = v => A.students.find(s => sid(s) === v);
+  const body = $('#tabBody');
+
+  body.querySelectorAll('select.ss').forEach(sel => sel.onchange = () => {
+    const s = byId(sel.dataset.s); setVal('status', s, sel.dataset.k, sel.value);
+    sel.className = `ss ${kindOf(sel.value)} ${S.dirty.has(dkey('status', s, sel.dataset.k))?'dirty':''}`;
+    refreshSaveBar();
+  });
+  body.querySelectorAll('input.si').forEach(inp => {
+    inp.oninput = () => {
+      const s = byId(inp.dataset.s); const v = inp.value.trim();
+      setVal('score', s, inp.dataset.k, v);
+      const n = num(v), mx = inp.dataset.max === '' ? null : Number(inp.dataset.max);
+      inp.classList.toggle('over', (n!=null && mx!=null && n > mx) || (v!=='' && isNaN(Number(v))));
+      inp.classList.toggle('dirty', S.dirty.has(dkey('score', s, inp.dataset.k)));
+      refreshSaveBar();
+    };
+    inp.onkeydown = e => { if (e.key === 'Enter'){ e.preventDefault(); const all = [...body.querySelectorAll('input.si')]; const i = all.indexOf(inp); const cols = A.items.filter(x=>x.inScore).length; const nx = all[i + (e.shiftKey?-cols:cols)]; nx && nx.focus(); nx && nx.select(); } };
+    inp.onfocus = () => inp.select();
+  });
+  bindSaveBar();
+
+  const bf = $('#bfGo');
+  if (bf) bf.onclick = () => {
+    const key = $('#bfItem').value, val = $('#bfVal').value, onlyEmpty = $('#bfEmpty').checked;
+    let n = 0;
+    filteredStudents().filter(s=>s.inStatus).forEach(s => { if (onlyEmpty && curVal('status', s, key)) return; setVal('status', s, key, val); n++; });
+    toast(`เติมค่า ${n} ช่อง (ยังไม่บันทึก)`);
+    renderTab();
+  };
+
+  const bPw = $('#bPw'); if (bPw) bPw.onclick = () => { S.showPw = !S.showPw; renderTab(); };
+  const bAdd = $('#bAddStu'); if (bAdd) bAdd.onclick = () => openStudentModal(null);
+  body.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => openStudentModal(byId(b.dataset.edit)));
+  body.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => {
+    const s = byId(b.dataset.del);
+    if (!(await confirmBox('ลบนักเรียน', `ลบ <b>${esc(s.name)}</b> (ห้อง ${esc(s.cls)}) ออกจาก <b>ทั้ง 3 ชีต</b> รวมถึงสถานะและคะแนนทั้งหมด?<br><span style="color:var(--danger)">การลบแถวในชีตย้อนกลับได้จาก Version history ของ Google Sheets เท่านั้น</span>`, 'ลบนักเรียน'))) return;
+    try { await run(() => api('adminDeleteStudent', S.token, {name:s.name, stdId:s.stdId}), 'กำลังลบ...'); toast('ลบนักเรียนแล้ว'); await loadAdmin(true); } catch(e){ toast(e.message, true); }
+  });
+
+  const bAI = $('#bAddItem');
+  if (bAI) bAI.onclick = async () => {
+    const f = $('#newItem'), g = n => f.querySelector(`[name=${n}]`);
+    const a = {title:g('title').value.trim(), max:g('max').value.trim(), link:g('link').value.trim(), toStatus:g('toStatus').checked, toScore:g('toScore').checked};
+    if (!a.title) return toast('กรุณาระบุชื่อภาระงาน', true);
+    try { await run(() => api('adminAddAssignment', S.token, a), 'กำลังเพิ่มคอลัมน์...'); toast('เพิ่มภาระงานแล้ว'); await loadAdmin(true); } catch(e){ toast(e.message, true); }
+  };
+  body.querySelectorAll('[data-upd]').forEach(b => b.onclick = async () => {
+    const row = b.closest('.aitem'), g = n => row.querySelector(`[name=${n}]`).value.trim();
+    try { await run(() => api('adminUpdateAssignment', S.token, {key:b.dataset.upd, title:g('title'), max:g('max'), link:g('link')}), 'กำลังบันทึก...'); toast('บันทึกภาระงานแล้ว'); await loadAdmin(true); } catch(e){ toast(e.message, true); }
+  });
+  body.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => {
+    const key = b.dataset.rm;
+    modal({title:'ลบภาระงาน', icon:'alert', okText:'ลบคอลัมน์', okClass:'danger',
+      body:`<p style="line-height:1.7;margin-top:0">การลบจะ <b>ลบคอลัมน์ ${esc(key)}</b> ออกจากชีตสถานะและชีตคะแนน พร้อมข้อมูลของนักเรียนทุกคนในคอลัมน์นั้น</p><label style="font-size:14px">พิมพ์ <b class="mono">${esc(key)}</b> เพื่อยืนยัน<input class="txt" id="rmConfirm" style="width:100%;margin-top:6px"></label>`,
+      onOk: async w => {
+        if (w.querySelector('#rmConfirm').value.trim().toUpperCase() !== key) { toast('รหัสไม่ตรง', true); return false; }
+        await run(() => api('adminDeleteAssignment', S.token, key), 'กำลังลบคอลัมน์...'); toast('ลบภาระงานแล้ว'); await loadAdmin(true);
+      }});
+  });
+
+  const bAnn = $('#bAnn');
+  if (bAnn) {
+    const save = async text => { try { await run(() => api('adminSetAnnouncement', S.token, text), 'กำลังบันทึก...'); A.announce = text; S.announce = text; toast(text?'บันทึกประกาศแล้ว':'ล้างประกาศแล้ว'); renderTab(); } catch(e){ toast(e.message, true); } };
+    bAnn.onclick = () => save($('#annText').value.trim());
+    $('#bAnnClear').onclick = () => save('');
+  }
+  const bCred = $('#bCred');
+  if (bCred) bCred.onclick = async () => {
+    const f = $('#credForm'), g = n => f.querySelector(`[name=${n}]`).value;
+    if (g('p1') !== g('p2')) return toast('รหัสผ่านใหม่ไม่ตรงกัน', true);
+    try { await run(() => api('adminChangeCredentials', S.token, g('cur'), g('user'), g('p1')), 'กำลังบันทึก...'); A.adminUser = g('user').trim(); toast('เปลี่ยนบัญชีผู้ดูแลแล้ว'); renderAdmin(); } catch(e){ toast(e.message, true); }
+  };
+}
+function refreshSaveBar(){
+  const body = $('#tabBody');
+  const old = body.querySelector('.savebar');
+  const html = saveBar();
+  if (old) old.remove();
+  if (html) body.insertAdjacentHTML('beforeend', html);
+  bindSaveBar();
+}
+function bindSaveBar(){
+  const bs = $('#bSave'), bd = $('#bDiscard');
+  if (bd) bd.onclick = () => { S.dirty.clear(); renderTab(); };
+  if (bs) bs.onclick = async () => {
+    const changes = [...S.dirty.values()];
+    const bad = changes.filter(c => c.type==='score' && c.value!=='' && isNaN(Number(c.value)));
+    if (bad.length) return toast('มีคะแนนที่ไม่ใช่ตัวเลข กรุณาแก้ไขก่อนบันทึก', true);
+    try {
+      const r = await run(() => api('adminSaveChanges', S.token, changes), `กำลังบันทึก ${changes.length} รายการ...`);
+      if (!r) return;
+      changes.forEach(c => { const s = S.admin.students.find(x => (x.stdId && x.stdId===c.stdId) || x.name===c.name); if (s) (c.type==='status'?s.status:s.score)[c.key] = c.value; });
+      S.dirty.clear();
+      toast(`บันทึกแล้ว ${r.saved} รายการ${r.failed?` (ไม่สำเร็จ ${r.failed})`:''}`, !!r.failed);
+      renderTab();
+    } catch(e){ toast(e.message, true); }
+  };
+}
+window.addEventListener('beforeunload', e => { if (S.dirty.size){ e.preventDefault(); e.returnValue = ''; } });
+
+/* =====================================================================
+ *  LIVE backend: อ่านข้อมูลจริงจาก Google Sheets ที่แชร์สาธารณะ (อ่านอย่างเดียว)
+ * =================================================================== */
+const SHEETS = {
+  login:  '1lPC9ueFH1FVSBiSC_erp1eZGASi7EtmF1KUi-K5rfIE',   // Login: Number | Name | Username | Password | Class
+  status: '1n5-IxePWdAiUkJMuHD725WFTBmzOq09jGAfZp_EMrgg',   // สถานะการส่ง
+  score:  '1jN1R_NomnCVPaW2Vou9qvU6H7r_WeZEJf0Iigyh8unE'    // คะแนน
+};
+const ADMIN_HASH = '2d4e0268132efa02f2bfab2cbdb746ea359aa2f575a36138613041c5a1d5ce1a'; // sha256("username:password")
+const DEFAULT_APP = { title:'ระบบส่งงานและดูคะแนน', subject:'การเขียนโปรแกรมคอมพิวเตอร์', level:'ชั้นมัธยมศึกษาปีที่ 2  ภาคเรียนที่ 2  ปีการศึกษา 2569', school:'โรงเรียนวิทยาศาสตร์จุฬาภรณราชวิทยาลัย เชียงราย', logoUrl:'' };
+
+function parseCSV(text){
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++){
+    const c = text[i];
+    if (q) {
+      if (c === '"') { if (text[i+1] === '"') { f += '"'; i++; } else q = false; }
+      else f += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { row.push(f); f = ''; }
+    else if (c === '\n') { row.push(f); rows.push(row); row = []; f = ''; }
+    else if (c !== '\r') f += c;
+  }
+  if (f !== '' || row.length) { row.push(f); rows.push(row); }
+  return rows;
+}
+
+const LIVE = (() => {
+  let cache = null, cacheAt = 0;
+  const clean = s => String(s == null ? '' : s).replace(/\s+/g, ' ').trim();
+  const normId = s => String(s || '').trim().replace(/^'/, '').replace(/^0+(?=\d)/, '');
+  const keyOf = t => { t = String(t).replace(/\(\s*\d+(?:\.\d+)?\s*\)\s*$/, '').trim(); const i = t.indexOf(':'); return (i > 0 ? t.slice(0, i) : t).toUpperCase().replace(/\s+/g, ''); };
+  const parseHeader = h => { h = clean(h); let title = h, max = null; const m = h.match(/\(\s*(\d+(?:\.\d+)?)\s*\)\s*$/); if (m) { max = Number(m[1]); title = h.slice(0, m.index).trim(); } return { key: keyOf(title), title, max }; };
+  function fixedCols(headers){
+    const low = headers.map(h => h.toLowerCase().replace(/[\s_\-.]/g, ''));
+    const find = names => { for (const n of names){ const j = low.indexOf(n); if (j >= 0) return j; } return -1; };
+    return { number: find(['number','no','เลขที่']), stdId: find(['stdid','studentid','รหัสนักเรียน','รหัส']),
+             name: find(['name','ชื่อสกุล','ชื่อนามสกุล','ชื่อ']), cls: find(['class','ห้อง','ชั้น']),
+             username: find(['username','user']), password: find(['password','pass','รหัสผ่าน']) };
+  }
+  function table(values){
+    const headers = (values[0] || []).map(clean);
+    const rows = values.slice(1).filter(r => r.some(c => String(c).trim()));
+    return { headers, rows, col: fixedCols(headers) };
+  }
+  const cell = (t, r, k) => t.col[k] >= 0 ? clean(r[t.col[k]]) : '';
+  const aCols = t => { const fx = Object.values(t.col); return t.headers.map((h, i) => i).filter(i => t.headers[i] && !fx.includes(i)); };
+  function findRow(t, q){
+    if (q.stdId && t.col.stdId >= 0){ const id = normId(q.stdId); const i = t.rows.findIndex(r => normId(r[t.col.stdId]) === id); if (i >= 0) return i; }
+    if (q.name && t.col.name >= 0){ const n = clean(q.name); const i = t.rows.findIndex(r => clean(r[t.col.name]) === n); if (i >= 0) return i; }
+    return -1;
+  }
+  function mergeItems(st, sc){
+    const list = [];
+    aCols(st).forEach(c => { const p = parseHeader(st.headers[c]); if (!list.some(x => x.key === p.key)) list.push({...p, stCol:c, scCol:-1}); });
+    let last = -1;
+    aCols(sc).forEach(c => {
+      const p = parseHeader(sc.headers[c]); const i = list.findIndex(x => x.key === p.key);
+      if (i >= 0) { if (list[i].scCol < 0) list[i].scCol = c; if (p.max != null) list[i].max = p.max; last = i; }
+      else { list.splice(last + 1, 0, {...p, stCol:-1, scCol:c}); last++; }
+    });
+    list.forEach(x => x.link = '');
+    return list;
+  }
+  async function fetchSheet(id){
+    let r;
+    try { r = await fetch(`https://docs.google.com/spreadsheets/d/${id}/export?format=csv`, {cache:'no-store'}); }
+    catch(e){ throw new Error('เชื่อมต่อ Google Sheets ไม่ได้ กรุณาตรวจสอบอินเทอร์เน็ต'); }
+    const t = await r.text();
+    if (!r.ok || /^\s*</.test(t)) throw new Error('อ่าน Google Sheets ไม่ได้ — ตรวจสอบว่าแชร์ชีตแบบ "ทุกคนที่มีลิงก์ดูได้"');
+    return table(parseCSV(t));
+  }
+  async function load(force){
+    if (!force && cache && Date.now() - cacheAt < 15000) return cache;
+    const [lg, st, sc] = await Promise.all([fetchSheet(SHEETS.login), fetchSheet(SHEETS.status), fetchSheet(SHEETS.score)]);
+    cache = {lg, st, sc}; cacheAt = Date.now();
+    return cache;
+  }
+  function studentData(D, sess){
+    const {st, sc} = D, items = mergeItems(st, sc);
+    let si = findRow(st, {name: sess.name}); if (si < 0) si = findRow(st, {stdId: sess.id});
+    let ci = findRow(sc, {name: sess.name}); if (ci < 0) ci = findRow(sc, {stdId: sess.id});
+    const sRow = si >= 0 ? st.rows[si] : null, cRow = ci >= 0 ? sc.rows[ci] : null;
+    return {
+      profile: { number: sess.number || (sRow ? cell(st, sRow, 'number') : ''),
+                 stdId: (sRow && cell(st, sRow, 'stdId')) || (cRow && cell(sc, cRow, 'stdId')) || sess.id,
+                 name: sess.name, cls: sess.cls || (sRow ? cell(st, sRow, 'cls') : ''), username: sess.username },
+      items: items.map(x => ({ key:x.key, title:x.title, max:x.max, link:x.link, hasStatus:x.stCol >= 0, hasScore:x.scCol >= 0,
+        status: x.stCol >= 0 && sRow ? clean(sRow[x.stCol]) : '', score: x.scCol >= 0 && cRow ? clean(cRow[x.scCol]) : '' })),
+      found: { status: !!sRow, score: !!cRow }, announce: '', updatedAt: new Date().toISOString()
+    };
+  }
+  function findStudent(D, id){
+    const {lg, st, sc} = D;
+    if (lg.col.password >= 0){
+      const r = lg.rows.find(r => { const a = clean(r[lg.col.password]); return a === id || (/^\d+$/.test(a) && normId(a) === normId(id)); });
+      if (r) return { name: cell(lg, r, 'name'), cls: cell(lg, r, 'cls'), number: cell(lg, r, 'number'), username: cell(lg, r, 'username'), id };
+    }
+    for (const t of [st, sc]){ const i = findRow(t, {stdId: id}); if (i >= 0){ const r = t.rows[i]; return { name: cell(t, r, 'name'), cls: cell(t, r, 'cls'), number: cell(t, r, 'number'), username: '', id }; } }
+    return null;
+  }
+  const RO = () => { throw new Error('โหมด LIVE อ่านข้อมูลได้อย่างเดียว — การแก้ไขให้ทำใน Google Sheets หรือติดตั้งบน Apps Script'); };
+  async function sha256(s){
+    if (!window.crypto || !crypto.subtle) throw new Error('เบราว์เซอร์นี้ไม่รองรับการตรวจสอบรหัสผ่าน (ต้องเปิดผ่าน https)');
+    const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+    return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+  }
+  return {
+    getPublicInfo: () => ({ app: DEFAULT_APP, announce: '' }),
+    async studentLogin(id){
+      id = String(id || '').replace(/\s+/g, '');
+      if (!id) throw new Error('กรุณากรอกรหัสนักเรียน');
+      if (!/^\d{3,10}$/.test(id)) throw new Error('รหัสนักเรียนต้องเป็นตัวเลขเท่านั้น');
+      const D = await load(true);
+      const sess = findStudent(D, id);
+      if (!sess || !sess.name) throw new Error(`ไม่พบรหัสนักเรียน ${id} ในระบบ`);
+      return { token: 'stu:' + id, data: studentData(D, sess) };
+    },
+    async getStudentData(token){
+      const id = String(token || '').replace(/^stu:/, '');
+      const D = await load(true);
+      const sess = findStudent(D, id);
+      if (!sess) throw new Error('SESSION_EXPIRED');
+      return studentData(D, sess);
+    },
+    logout: () => true,
+    async adminLogin(u, p){
+      if (await sha256(String(u).trim() + ':' + p) !== ADMIN_HASH) throw new Error('ชื่อผู้ใช้หรือรหัสผ่านครูไม่ถูกต้อง');
+      return { token: 'admin:' + ADMIN_HASH.slice(0, 16) };
+    },
+    async adminGetData(token){
+      if (token !== 'admin:' + ADMIN_HASH.slice(0, 16)) throw new Error('SESSION_EXPIRED');
+      const {lg, st, sc} = await load(true);
+      const items = mergeItems(st, sc);
+      const students = [], usedL = new Set(), usedS = new Set();
+      const fromLogin = (rec, name) => { let li = findRow(lg, {name});
+        if ((li < 0 || usedL.has(li)) && rec.stdId && lg.col.password >= 0) li = lg.rows.findIndex((r, i) => !usedL.has(i) && normId(r[lg.col.password]) === normId(rec.stdId)); if (li >= 0 && !usedL.has(li)){ usedL.add(li); rec.inLogin = true; rec.username = cell(lg, lg.rows[li], 'username'); rec.password = cell(lg, lg.rows[li], 'password'); if (!rec.number) rec.number = cell(lg, lg.rows[li], 'number'); } };
+      st.rows.forEach(r => {
+        const name = cell(st, r, 'name'); if (!name) return;
+        const rec = { number: cell(st, r, 'number'), stdId: cell(st, r, 'stdId'), name, cls: cell(st, r, 'cls'), username:'', password:'', status:{}, score:{}, inStatus:true, inScore:false, inLogin:false };
+        items.forEach(x => { if (x.stCol >= 0) rec.status[x.key] = clean(r[x.stCol]); });
+        const ci = findRow(sc, {stdId: rec.stdId, name});
+        if (ci >= 0 && !usedS.has(ci)){ usedS.add(ci); rec.inScore = true; items.forEach(x => { if (x.scCol >= 0) rec.score[x.key] = clean(sc.rows[ci][x.scCol]); }); }
+        fromLogin(rec, name);
+        students.push(rec);
+      });
+      sc.rows.forEach((r, i) => {
+        const name = cell(sc, r, 'name'); if (!name || usedS.has(i)) return;
+        const rec = { number: cell(sc, r, 'number'), stdId: cell(sc, r, 'stdId'), name, cls: cell(sc, r, 'cls'), username:'', password:'', status:{}, score:{}, inStatus:false, inScore:true, inLogin:false };
+        items.forEach(x => { if (x.scCol >= 0) rec.score[x.key] = clean(r[x.scCol]); });
+        fromLogin(rec, name); students.push(rec);
+      });
+      lg.rows.forEach((r, i) => {
+        const name = cell(lg, r, 'name'); if (!name || usedL.has(i)) return;
+        students.push({ number: cell(lg, r, 'number'), stdId:'', name, cls: cell(lg, r, 'cls'), username: cell(lg, r, 'username'), password: cell(lg, r, 'password'), status:{}, score:{}, inStatus:false, inScore:false, inLogin:true });
+      });
+      return {
+        app: DEFAULT_APP, readOnly: true,
+        items: items.map(x => ({ key:x.key, title:x.title, max:x.max, link:x.link, inStatus:x.stCol >= 0, inScore:x.scCol >= 0 })),
+        students, classes: [...new Set(students.map(s => s.cls).filter(Boolean))].sort(),
+        statusOptions: ['ตรวจแล้ว','ส่งแล้ว','ส่งช้า','ส่งใหม่'], announce: '', adminUser: 'khanapot',
+        sheets: Object.fromEntries(Object.entries(SHEETS).map(([k, id]) => [k, `https://docs.google.com/spreadsheets/d/${id}/edit`])),
+        updatedAt: new Date().toISOString()
+      };
+    },
+    adminSaveChanges: RO, adminAddAssignment: RO, adminUpdateAssignment: RO, adminDeleteAssignment: RO,
+    adminSaveStudent: RO, adminDeleteStudent: RO, adminSetAnnouncement: RO, adminChangeCredentials: RO
+  };
+})();
+
+/* =====================================================================
+ *  Demo mock backend (?demo=1)
+ * =================================================================== */
+const MOCK = (() => {
+  const app = { title:'ระบบส่งงานและดูคะแนน', subject:'การเขียนโปรแกรมคอมพิวเตอร์', level:'ชั้นมัธยมศึกษาปีที่ 2  ภาคเรียนที่ 2  ปีการศึกษา 2569', school:'โรงเรียนวิทยาศาสตร์จุฬาภรณราชวิทยาลัย เชียงราย', logoUrl:'' };
+  const items = [
+    ['W1:ใบงานที่ 1.1',3,1,1],['W2 : Basic Python',3,1,1],['W3 : print&input',4,1,1],['W4 : if...else',5,1,1],['W5 : if...elif...else',5,1,1],
+    ['W6 : nested if',5,1,1],['W7 : While Loop',5,1,1],['W8 : For Loop',5,1,1],['Mid Test',20,0,1],['W9 : Function',null,1,1],['W10 : Ai for Python',null,1,1],['Mini Project',20,1,1]
+  ].map(([title,max,st,sc]) => ({key: (title.includes(':')?title.split(':')[0]:title).toUpperCase().replace(/\s+/g,''), title, max, link:'', inStatus:!!st, inScore:!!sc}));
+  items[5].link = 'https://classroom.google.com/';
+  let seed = 7; const rnd = () => (seed = (seed*9301+49297)%233280)/233280;
+  const first = ['ตัวอย่าง','ภูมิ','ปัณณ์','ธาม','กันต์','ณิชา','พิมพ์','ใบเตย','ภัทร','ต้นกล้า','มายด์','ข้าวหอม'];
+  const last = ['ทดสอบระบบ','ใจดี','รักเรียน','สุขสันต์','มั่นคง','ศรีสุข','แสงทอง','วงศ์ไพบูลย์'];
+  const students = []; let id = 5867;
+  ['2/1','2/2','2/3','2/4'].forEach((cls, ci) => {
+    for (let n=1;n<=8;n++){
+      const fn = ci===0 && n===1 ? 'ตัวอย่าง' : first[1 + Math.floor(rnd()*(first.length-1))] + (ci*8+n);
+      const girl = rnd() > .5 && !(ci===0&&n===1);
+      const s = { number:String(n), stdId:String(id++).padStart(5,'0'), name:`${girl?'เด็กหญิง':'เด็กชาย'}${fn} ${last[Math.floor(rnd()*last.length)]}`, cls,
+        username: ci===0&&n===1 ? 'demo' : fn, password:'', status:{}, score:{}, inStatus:true, inScore:true, inLogin:true };
+      s.password = ci===0&&n===1 ? '00001' : s.stdId;
+      items.forEach((x, i) => {
+        if (x.inStatus) {
+          const r = rnd();
+          s.status[x.key] = i < 4 ? (r < .82 ? 'ตรวจแล้ว' : r < .9 ? 'ส่งช้า' : r < .95 ? 'ส่งใหม่' : '') : i < 5 ? (r < .6 ? 'ตรวจแล้ว' : r < .7 ? 'ส่งแล้ว' : '') : '';
+          if (ci===0&&n===1 && i===4) s.status[x.key] = 'ส่งใหม่';
+        }
+        if (x.inScore) s.score[x.key] = (x.inStatus && ['ตรวจแล้ว','ส่งช้า'].includes(s.status[x.key]) && x.max) ? String(Math.max(1, x.max - Math.floor(rnd()*2))) : '';
+      });
+      students.push(s);
+    }
+  });
+  let announce = 'ส่งงาน W6 : nested if ภายในวันศุกร์นี้ ก่อน 16.00 น. นะครับ 🐍';
+  let admin = {user:'demo', pass:'demo1234'};
+  const sessions = {};
+  const tok = d => { const t = Math.random().toString(36).slice(2); sessions[t] = d; return t; };
+  const need = (t, role) => { const s = sessions[t]; if (!s) throw new Error('SESSION_EXPIRED'); if (role && s.role!==role) throw new Error('ไม่มีสิทธิ์'); return s; };
+  const findS = q => students.find(s => (q.stdId && s.stdId===q.stdId) || s.name===q.name);
+  const stuData = s => ({ profile:{number:s.number, stdId:s.stdId, name:s.name, cls:s.cls, username:s.username},
+    items: items.map(x => ({key:x.key, title:x.title, max:x.max, link:x.link, hasStatus:x.inStatus, hasScore:x.inScore, status:s.status[x.key]||'', score:s.score[x.key]||''})),
+    found:{status:true, score:true}, announce, updatedAt:new Date().toISOString() });
+  return {
+    getPublicInfo: () => ({app, announce}),
+    studentLogin(id){ id = String(id).replace(/\s+/g,''); if (!id) throw new Error('กรุณากรอกรหัสนักเรียน'); const s = students.find(s => s.password.replace(/^0+/,'')===id.replace(/^0+/,'')); if (!s) throw new Error(`ไม่พบรหัสนักเรียน ${id} ในระบบ`); return {token: tok({role:'student', name:s.name}), data: stuData(s)}; },
+    getStudentData(t){ return stuData(findS({name: need(t,'student').name})); },
+    logout(t){ delete sessions[t]; return true; },
+    adminLogin(u, p){ if (u!==admin.user || p!==admin.pass) throw new Error('ชื่อผู้ใช้หรือรหัสผ่านครูไม่ถูกต้อง'); return {token: tok({role:'admin'})}; },
+    adminGetData(t){ need(t,'admin'); return {app, items, students, classes:[...new Set(students.map(s=>s.cls))].sort(), statusOptions:['ตรวจแล้ว','ส่งแล้ว','ส่งช้า','ส่งใหม่'], announce, adminUser:admin.user,
+      sheets:{login:'https://docs.google.com/spreadsheets/d/1lPC9ueFH1FVSBiSC_erp1eZGASi7EtmF1KUi-K5rfIE/edit', status:'https://docs.google.com/spreadsheets/d/1n5-IxePWdAiUkJMuHD725WFTBmzOq09jGAfZp_EMrgg/edit', score:'https://docs.google.com/spreadsheets/d/1jN1R_NomnCVPaW2Vou9qvU6H7r_WeZEJf0Iigyh8unE/edit'}, updatedAt:new Date().toISOString()}; },
+    adminSaveChanges(t, ch){ need(t,'admin'); let saved=0; ch.forEach(c => { const s = findS(c); if (s){ (c.type==='status'?s.status:s.score)[c.key] = String(c.value); saved++; } }); return {saved, failed: ch.length-saved}; },
+    adminAddAssignment(t, a){ need(t,'admin'); const key = (a.title.includes(':')?a.title.split(':')[0]:a.title).toUpperCase().replace(/\s+/g,''); if (items.some(x=>x.key===key)) throw new Error(`มีภาระงานรหัส "${key}" อยู่แล้ว`); items.push({key, title:a.title, max:a.max===''?null:Number(a.max), link:a.link, inStatus:a.toStatus, inScore:a.toScore}); return {key}; },
+    adminUpdateAssignment(t, a){ need(t,'admin'); const x = items.find(x=>x.key===a.key); x.title=a.title; x.max=a.max===''?null:Number(a.max); x.link=a.link; return {key:x.key}; },
+    adminDeleteAssignment(t, key){ need(t,'admin'); const i = items.findIndex(x=>x.key===key); if (i>=0) items.splice(i,1); return true; },
+    adminSaveStudent(t, v, orig){ need(t,'admin'); const s = orig ? findS(orig) : null; if (s) Object.assign(s, v); else students.push({...v, status:{}, score:{}, inStatus:true, inScore:true, inLogin:true}); return true; },
+    adminDeleteStudent(t, orig){ need(t,'admin'); const i = students.indexOf(findS(orig)); if (i>=0) students.splice(i,1); return true; },
+    adminSetAnnouncement(t, text){ need(t,'admin'); announce = text; return true; },
+    adminChangeCredentials(t, cur, u, p){ need(t,'admin'); if (cur!==admin.pass) throw new Error('รหัสผ่านปัจจุบันไม่ถูกต้อง'); if (p.length<6) throw new Error('รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร'); admin = {user:u.trim(), pass:p}; return true; }
+  };
+})();
+
+/* =====================================================================
+ *  Boot
+ * =================================================================== */
+(async function boot(){
+  decorate();
+  applyApp({ title:'ระบบส่งงานและดูคะแนน', subject:'การเขียนโปรแกรมคอมพิวเตอร์', level:'ชั้นมัธยมศึกษาปีที่ 2  ภาคเรียนที่ 2  ปีการศึกษา 2569', school:'โรงเรียนวิทยาศาสตร์จุฬาภรณราชวิทยาลัย เชียงราย', logoUrl:'' });
+  if (MODE === 'demo') document.body.insertAdjacentHTML('beforeend', '<div class="demo-badge">DEMO MODE • ข้อมูลจำลอง</div>');
+  if (MODE === 'live') document.body.insertAdjacentHTML('beforeend', '<div class="demo-badge" style="background:#22a565;color:#fff">● LIVE • Google Sheets</div>');
+  try { const info = await api('getPublicInfo'); applyApp(info.app); S.announce = info.announce; } catch(e){}
+  const saved = store.get();
+  if (saved && saved.token) {
+    S.token = saved.token; S.role = saved.role;
+    try {
+      if (saved.role === 'admin') { await loadAdmin(); return; }
+      const d = await run(() => api('getStudentData', S.token), 'กำลังโหลดข้อมูลงาน...');
+      if (d) { S.student = d; renderStudent(); return; }
+    } catch(e){ store.set(null); }
+  }
+  if (!S.role || !$('#app').innerHTML) renderLogin();
+})();
+</script>
+</body>
+</html>
